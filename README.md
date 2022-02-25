@@ -23,13 +23,13 @@ This will configure a new conda environment named 'SVS'.
 ```
 ./download_train_data.sh
 ```
-And go [Train and Test](#retro-analysis).
+And go [Train and Test](#Train and Test).
 
 2. Or, if you want to get the training data by running our retro-anaylsis tool followed by model training, you can download the ingredients with:
 ```
 ./download_retro_and_train_data.sh
 ```
-And go [Retro-analysis](#Train and Test).
+And go [Retro-analysis](#Retro-analysis).
 
 ## Retro-analysis
 After downloading the data by ```./download_training_data.sh```, you can run retro-analysis tool by:
