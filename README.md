@@ -52,5 +52,5 @@ python ./test_model.py
 ```
 
 ## Using trained model as a tool for VS
-Getting a score directly from chemical SMILES is described in ```SVS/getSVS.py```.
-For a test, you can simply run ```python SVS/getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
+Getting a score directly from chemical SMILES is described in ```SVS/getSVS.py```.   
+For a fast test, you can simply run ```python SVS/getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
