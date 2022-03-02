@@ -1,29 +1,64 @@
 # Synthesizability for Virtual Screening
-Scoring synthesizability of candidates for VS
+Scoring synthesizability of drug candidates using GAT model
 
-### Download Sample File
-Sample data and model can be found in the [link to sample](https://drive.google.com/file/d/1i0rhaFsuK7Mx3dG5cweeMLOw6nYHbedF/view?usp=sharing).
+# Table of Contents
+- [Install Dependencies](#install-dependencies)
+- [Download Data](#download-data)
+- [Retro-analysis](#retro-analysis)
+- [Train and Test](#train-and-test)
+  - [Train](#train)
+  - [Test](#test)
+- [Using trained model as a scoring metric for VS](#using-trained-model-as-a-scoring-metric-for-vs)
 
-### Writing Config File
-First, open the .yaml file in config folder and write appropriate arguments.
+## Install Dependencies
+SVS needs conda environment. After installing [conda](https://www.anaconda.com/),   
+you can manually install the required pakages as follows:
+- rdkit=2020.09.1
+- scipy
+- numpy
+- scikit-learn
+- pytorch
 
-### Training Model
-To train the model, use the following command:
-
+Or simply you can install the required packages by running
 ```
-  python train.py --config={directory_to_train.yaml} --save_dir={directory_to_save_train_log_and_model} --ngpu={ngpu} --batch_size={batch_size}
+./dependencies
+```
+This will configure a new conda environment named 'SVS'.
+
+## Download Data
+1. If you ONLY want to train the SVS model without retro-analysis, you can download the data for training with:   
+```
+./download_train_data.sh
+```
+And go to [Train and Test](#train-and-test).
+
+2. Or, if you want to get the training data by running our retro-anaylsis tool followed by model training, you can download the ingredients with:
+```
+./download_retro_and_train_data.sh
+```
+And go to [Retro-analysis](#retro-analysis).
+
+## Retro-analysis
+After downloading the data by ```./download_training_data.sh```, you can run retro-analysis tool by:
+```
+python ./retro_analysis.py --data 
+```
+And go to [Train and Test](#train-and-test).
+
+## Train and Test
+After getting data for training by ```./download_retro_data.sh``` or manually running ```./retro_analysis.py```,   
+
+### Train
+You can train a new model by:
+```
+python ./train_model.py
+```
+### Test
+You can test your model by:
+```
+python ./test_model.py
 ```
 
-### Testing Model
-To test the model, use the following command:
-
-```
-  python test.py --config={directory_to_test.yaml} --save_dir={directory_to_save_test_log}
-```
-
-### Plot the Test Result
-To plot the density curve, use the following command:
-
-```
-  python plot.py --data_dir={directory_to_result_pkl} --save_dir={directory_to_save_png_file}
-```
+## Using trained model as a scoring metric for VS
+Getting a score directly from chemical SMILES is described in ```SVS/getSVS.py```.   
+For a fast test, you can simply run ```python SVS/getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
