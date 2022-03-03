@@ -41,7 +41,13 @@ And go to [Retro-analysis](#retro-analysis).
 ## Retro-analysis
 After downloading the data by ```./download_training_data.sh```, you can run retro-analysis tool by:
 ```
-python ./retro_analysis.py --data 
+python retro_analysis.py \
+    --template data/template/retro_template.pkl \
+    --reactant data/reactant_bag/filtered_ZINC.smi \
+    --retro_target <PATH TO TARGET FILE> \
+    --depth 4 \
+    --num_molecules <NUMBER OF MOLECULES TO BE ANALYZED> \
+    --num_cores <NUMBER OF CPU CORES>
 ```
 And go to [Train and Test](#train-and-test).
 
