@@ -13,7 +13,7 @@ import time
 import argparse
 from datetime import datetime
 
-def GAT_model_evaluation(data_dir, save_dir, evaluation_args):
+def model_evaluate(data_dir, save_dir, evaluation_args):
     # 0. inintial setting
     now = datetime.now()
     since_from = now.strftime('%Y. %m. %d (%a) %H:%M:%S')

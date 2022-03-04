@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from scripts import model
-from scripts.data import GraphDataset
-from scripts.utils import working_dir_setting
+from model import SVS
+from data import GraphDataset
+from utils import working_dir_setting
 
 import numpy as np
 import os
@@ -34,7 +34,7 @@ def GAT_model_inference(data_dir, save_dir, inference_args):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(int(cuda_device))
     #os.environ['ONP_NUM_THREADS'] = '1'
 
-    predictor = model.GAT_Multiclass_Classification(
+    predictor = SVS(
             n_dim=n_dim,
             n_GAT_layer=n_GAT_layer,
             n_fc_layer=n_fc_layer,

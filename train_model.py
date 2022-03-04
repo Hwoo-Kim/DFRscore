@@ -1,57 +1,23 @@
 import argparse
 import os
-from scripts.modelScripts.preprocessing import train_data_preprocessing
-from scripts.modelScripts.train import GAT_model_train
+from scripts.modelScripts.preprocessing import train_data_preprocess
+from scripts.modelScripts.train import train_SVS
 from scripts.utils import logger
 from scripts.utils import train_save_dir_setting
 from datetime import datetime
 
 def main_train(args):
     # 0. Reading config and directory setting
-    project_path = os.path.dirname(os.path.realpath(__file__))
-    args.root = project_path
-    #project_path = os.getcwd()
-
-    assert args.data_preprocessing=='True' or args.data_preprocessing=='False', \
-        "given args.data_preprocessing is neither 'True' nor 'False'."
-    args.data_preprocessing = args.data_preprocessing=='True'
+    args.root = os.path.dirname(os.path.realpath(__file__))
     args.data_dir, args.save_dir = train_save_dir_setting(args)
     args.logger = logger(os.path.join(args.save_dir, 'training.log'))
     args.logger(f'Model training save directory is:\n  {args.save_dir}')
     
     # 1. Training data preprocessing
-    train_data_preprocessing(args)
-    exit()
+    train_data_preprocess(args=args)
 
-    """
-    # 2. Retrosynthetic analysis
-    if args.path:
-        from scripts.retroAnalysis.retro_path_analysis import retrosyntheticAnalyzer
-    else:
-        from scripts.retroAnalysis.retro_analysis import retrosyntheticAnalyzer
-
-
-
-
-
-
-    # 0. Reading config and directory setting
-    data_directory = os.path.normpath(args.data_dir)
-    save_directory = os.path.normpath(args.save_dir)
-    save_name = os.path.normpath(args.save_name)
-    save_directory = f'{save_directory}/{save_name}'
-    if not os.path.isdir(save_directory):
-        os.mkdir(save_directory)
-    assert args.data_preprocessing=='True' or args.data_preprocessing=='False', \
-            'args.data_preprocessing is neither True nor False.'
-    args.data_preprocessing=args.data_preprocessing=='True'
-    
-    # 2. input data generation
-    # raio = (train:val:test)
-    
-    # 3. model train
-    GAT_model_train(data_dir=input_data_path, save_dir=save_directory, args=args)
-    """
+    # 2. model train
+    train_SVS(args=args)
 
 # main operation:
 if __name__=='__main__':
@@ -62,7 +28,6 @@ if __name__=='__main__':
     # Default setting
     parser.add_argument('--num_data', type = str, default=250000, help = 'number of data used in train/val/test.')
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
-    parser.add_argument('--data_preprocessing', type = str, default='True', help = "True for data generation and training, False for only training")
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')
     parser.add_argument('--max_num_atoms', type = int, default=64, help = 'maximum number of atoms')
     parser.add_argument('--batch_size', type = int, default=512, help = 'batch size')

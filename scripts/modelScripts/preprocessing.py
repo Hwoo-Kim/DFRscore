@@ -237,7 +237,7 @@ def get_atoms_feature(sssr, atom):
                     # 11+6+6+6+6+1 = 36
 
 # 3. Main functions
-def train_data_preprocessing(args):
+def train_data_preprocess(args):
     # 1. Reading data
     preprocess_dir = os.path.join(args.data_dir, args.data_preprocess_name)
     since = time.time()

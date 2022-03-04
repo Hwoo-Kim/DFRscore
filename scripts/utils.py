@@ -17,6 +17,7 @@ import signal
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 
+"""
 def reactant_frags_generator(templates):
     '''
     Function: get only reactant parts
@@ -102,29 +103,35 @@ def target_enumerator(targets, reactant_frag, option:str):
                 neg_set.append(targets[idx])
             continue
         return pos_set, neg_set
+"""
 
-class logger() :
-    def __init__(self, log_file_path) :
+class logger():
+    def __init__(self, log_file_path):
         self.log_file = log_file_path
-        try :
-            with open(self.log_file, 'w') as w :
+        try:
+            with open(self.log_file, 'w') as w:
                 pass
-        except :
+        except:
             print(f"Invalid log path {log_file_path}")
             exit()
 
-    def __call__(self, *log, save_log = True, end='\n') :
+    def __call__(self, *log, save_log = True, end='\n'):
         if len(log)==0:
             log = ('',)
         log = [str(i) for i in log]
         log = '\n'.join(log)
         print(log, end=end)
-        if save_log :
+        if save_log:
             self.save(log, end=end)
 
-    def save(self, log, end) :
+    def save(self, log, end):
         with open(self.log_file, 'a') as w :
             w.write(log+end)
+
+    def log_arguments(self, args):
+        d = vars(args)
+        for v in d:
+            self(f'  {v}: {d[v]}')
 
 def retro_save_dir_setting(root, args):
     target_data_name = args.retro_target.split('/')[-1].split('.smi')[0]
@@ -175,39 +182,39 @@ def timeout(seconds, error_message=os.strerror(errno.ETIME)):
     return decorator
 
 def get_cuda_visible_devices(num_gpus: int) -> str:
-        """Get available GPU IDs as a str (e.g., '0,1,2')"""
-        max_num_gpus = 4
-        idle_gpus = []
+    """Get available GPU IDs as a str (e.g., '0,1,2')"""
+    max_num_gpus = 4
+    idle_gpus = []
 
-        if num_gpus:
-            for i in range(max_num_gpus):
-                cmd = ["nvidia-smi", "-i", str(i)]
+    if num_gpus:
+        for i in range(max_num_gpus):
+            cmd = ["nvidia-smi", "-i", str(i)]
 
-                import sys
-                major, minor = sys.version_info[0], sys.version_info[1]
-                if major == 3 and minor > 6:
-                    proc = subprocess.run(cmd, capture_output=True, text=True)  # after python 3.7
-                if major == 3 and minor <= 6:
-                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)  # for python 3.6
+            import sys
+            major, minor = sys.version_info[0], sys.version_info[1]
+            if major == 3 and minor > 6:
+                proc = subprocess.run(cmd, capture_output=True, text=True)  # after python 3.7
+            if major == 3 and minor <= 6:
+                proc = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)  # for python 3.6
 
-                if "No devices were found" in proc.stdout:
-                    break
+            if "No devices were found" in proc.stdout:
+                break
 
-                if "No running" in proc.stdout:
-                    idle_gpus.append(i)
+            if "No running" in proc.stdout:
+                idle_gpus.append(i)
 
-                if len(idle_gpus) >= num_gpus:
-                    break
+            if len(idle_gpus) >= num_gpus:
+                break
 
-            if len(idle_gpus) < num_gpus:
-                msg = "Avaliable GPUs are less than required!"
-                msg += f" ({num_gpus} required, {len(idle_gpus)} available)"
-                raise RuntimeError(msg)
+        if len(idle_gpus) < num_gpus:
+            msg = "Avaliable GPUs are less than required!"
+            msg += f" ({num_gpus} required, {len(idle_gpus)} available)"
+            raise RuntimeError(msg)
 
-            # Convert to a str to feed to os.environ.
-            idle_gpus = ",".join(str(i) for i in idle_gpus[:num_gpus])
+        # Convert to a str to feed to os.environ.
+        idle_gpus = ",".join(str(i) for i in idle_gpus[:num_gpus])
 
-        else:
-            idle_gpus = ""
+    else:
+        idle_gpus = ""
 
-        return idle_gpus
+    return idle_gpus

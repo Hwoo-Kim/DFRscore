@@ -1,8 +1,8 @@
 import torch
-from scripts.preprocessing import GAT_evaluation_data_generation
-from scripts.evaluation import GAT_model_evaluation
-from scripts.metrics import  model_eval
-from scripts.utils import working_dir_setting
+from scripts.modelScripts.preprocessing import GAT_evaluation_data_generation
+from scripts.modelScripts.evaluation import model_evaluate
+from scripts.modelScripts.metrics import  model_eval
+from scripts.modelScripts.utils import working_dir_setting
 from datetime import datetime
 import argparse
 import time

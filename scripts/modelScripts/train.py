@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 from scripts.model import GAT
 from data import GraphDataset
 import scripts.utils as utils
-#import working_dir_setting, logger
 
 import numpy as np
 import json
@@ -60,21 +59,19 @@ def test(model,loss_fn,test_data_loader):
     return test_loss_list
 
 
-def GAT_model_train(data_dir, save_dir, args):
+def train_SVS(args):
     # 0. initial setting
-    save_dir += f'/model_{args.training_data_path}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}'
-    dir_exist = os.path.isdir(save_dir)
-    if not dir_exist: os.mkdir(save_dir)
-    logger = utils.logger(f'{save_dir}/training.log')
-    if dir_exist: logger('The directopy already exists.')
-    logger('##### Model Training Phase #####')
+    data_dir = args.data_dir
+    save_dir = os.path.join(args.save_dir,f'/model_{args.data_preprocessing_name}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}')
+    log = args.logger
+    log('2. Model Training Phase')
     # For myself
     '''
     import shutil
     dir_name=data_dir.split('/')[-1]
     save_name = save_dir.split('/')[-2]
     if os.path.isdir(f'/scratch/hwkim/{save_name}/{dir_name}'):
-        logger('Data Exists!')
+        log('Data Exists!')
     else:
         shutil.copytree(data_dir, f'/scratch/hwkim/{save_name}/{dir_name}')
         '''
@@ -103,10 +100,11 @@ def GAT_model_train(data_dir, save_dir, args):
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=args.gamma)
     lr = args.lr
     predictor.cuda()
-    logger('----- Input Config Information -----','GAT_MCC model')
-    logger(data_dir)
-    logger.log_arguments(args)
-    logger('\n----- Training Log -----')
+    log('  ----- Train Config Information -----')
+    #log(f' data dir: {data_dir}')
+    log.log_arguments(args)
+    log()
+    log('  ----- Training Log -----')
     
     best_loss = 100000
     # 2. Training with validation
@@ -153,10 +151,10 @@ def GAT_model_train(data_dir, save_dir, args):
         epoch_end = time.time()
 
         # 2-3. Logging
-        logger(f'{i+1}th epoch,',
-            f'  training loss: {train_epoch_loss}',
-            f'  val loss: {val_epoch_loss}',
-            f'  epoch time: {epoch_end-epoch_start:.2f}')
+        log(f'  {i+1}th epoch,',
+            f'   training loss: {train_epoch_loss}',
+            f'   val loss: {val_epoch_loss}',
+            f'   epoch time: {epoch_end-epoch_start:.2f}')
         if i > args.decay_epoch:
             scheduler.step()
             lr *= args.gamma
@@ -166,12 +164,13 @@ def GAT_model_train(data_dir, save_dir, args):
     now = datetime.now()
     finished_at = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
     time_elapsed = int(time.time()-since)
-    logger(f'\n----- Training Finised -----',
-        f'finished at : {finished_at}',
-        'time passed: [%dh:%dm:%ds]' %(time_elapsed//3600, (time_elapsed%3600)//60, time_elapsed%60),
-        f'Best epoch: {best_epoch}',
-        f'Best loss: {best_loss}',
-        f'Decayed_lr: {lr}')
+    log()
+    log(f'  ----- Training Finised -----',
+        f'  finished at : {finished_at}',
+        '  time passed: [%dh:%dm:%ds]' %(time_elapsed//3600, (time_elapsed%3600)//60, time_elapsed%60),
+        f'  Best epoch: {best_epoch}',
+        f'  Best loss: {best_loss}',
+        f'  Decayed_lr: {lr}')
     with open(f'{save_dir}/loss_history.json', 'w') as fw:
         json.dump({'train': train_loss_history, 'val':val_loss_history}, fw)
 
@@ -180,4 +179,5 @@ def GAT_model_train(data_dir, save_dir, args):
     test_loss_list += test(predictor,loss_fn,test_data_loader)
     test_loss= np.mean(test_loss_list)
     # Logging
-    logger(f'\n----- Test result -----\n\ttest loss: {test_loss}')
+    log()
+    log(f'  ----- Test result -----','  test loss: {test_loss}')
