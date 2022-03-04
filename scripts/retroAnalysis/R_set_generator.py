@@ -13,7 +13,7 @@ def canonicalize_smiles(smis, l):
     l.append(can_smis)
     return True
 
-def R_set_generator(root, args, canonicalize=True):
+def R_set_generator(args, canonicalize=True):
     log = args.logger
     log()
     log('1. Reactant set generation Phase.')
@@ -22,14 +22,14 @@ def R_set_generator(root, args, canonicalize=True):
     log(f'  Started at: {since_inform}')
     # check the file already exists or not.
     since = time.time()
-    reactant_bag_path = os.path.join(root, 'data/reactant_bag/R_set.pkl')     # set
+    reactant_bag_path = os.path.join(args.root, 'data/reactant_bag/R_set.pkl')     # set
     if os.path.isfile(reactant_bag_path):
         log('  The file already exists.')
         log('  Reactant set generation finished.')
         return True
 
     # reading data from the input config
-    with open(os.path.join(root,args.reactant), 'r') as fr:
+    with open(args.reactant, 'r') as fr:
         reactants = fr.read().splitlines()
 
     # generate reactant set.

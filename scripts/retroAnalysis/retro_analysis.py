@@ -270,7 +270,7 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, log):
     return True
 
 
-def retrosyntheticAnalyzer(root, args):
+def retrosyntheticAnalyzer(args):
     '''
     Main function. This conducts multiprocessing of 'retrosynthetic_analysis_single_batch'.
     '''
@@ -279,10 +279,10 @@ def retrosyntheticAnalyzer(root, args):
     log()
     log('2. Retrosynthetic Analysis Phase.')
 
-    reactant_path = os.path.join(root,args.reactant)
-    reactant_set_path = os.path.join(root, 'data/reactant_bag/R_set.pkl')
-    template_path = os.path.join(root, args.template)
-    retro_target_path = os.path.join(root, args.retro_target)
+    reactant_path = args.reactant
+    reactant_set_path = os.path.join(args.root, 'data/reactant_bag/R_set.pkl')
+    template_path = args.template
+    retro_target_path = args.retro_target
     os.chdir(args.save_dir)
     os.mkdir('tmp')
     log = args.logger
@@ -407,6 +407,6 @@ def retrosyntheticAnalyzer(root, args):
         log(f'  Positive set depth_{i+1}: {numb_of_mols_in_each_pos[i]}')
     log(f'  Negative set depth_{args.depth}: {numb_of_mols_in_neg}',
             f'\n  finished_at: {finished_at}',
-            '    time passed: [%dh:%dm:%ds]' %(time_passed//3600, (time_passed%3600)//60, time_passed%60))
+            '  time passed: [%dh:%dm:%ds]' %(time_passed//3600, (time_passed%3600)//60, time_passed%60))
     return True
 
