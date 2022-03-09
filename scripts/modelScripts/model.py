@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
@@ -14,6 +13,7 @@ from preprocessing import get_atoms_feature
 from data import InferenceDataset
 
 import os, sys, pickle
+import numpy as np
 
 #MAX_NUM_ATOM = 64
 #CONV_DIM = 512
@@ -73,7 +73,8 @@ class SVS(nn.Module):
         retval = self.pred_layer(x)
         return retval
 
-    def restore(self):
+    def restore(self, path_to_model):
+        self.load_state_dict(torch.load(path_to_model))
         pass
 
     def mol_to_graph_feature(self, mol):
@@ -93,6 +94,24 @@ class SVS(nn.Module):
         padded_adj = torch.from_numpy(padded_adj)
 
         return padded_feature, padded_adj
+
+    def mols_to_graph_feature(self, mol_list):
+        save_dir = os.join(os.path.dirname(__file__), 'tmp')
+        os.mkdir(save_dir)
+        for idx, mol in enumerate(mol_list):
+            if mol:
+                padded_feature, padded_adj = self.mol_to_graph_feature(mol)
+                with open(f'{save_dir}/{idx}.pkl','wb') as fw:
+                    pickle.dump({'feature':padded_feature,
+                            'adj':padded_adj},
+                            fw)
+            else:
+                with open(f'{save_dir}/{idx}.pkl','wb') as fw:
+                    pickle.dump({'feature':torch.nan,
+                            'adj':torch.nan},
+                            fw)
+
+        return save_dir
 
     def smiToScore(self, smi:str) -> tuple:
         assert isinstance(smi, str), 'input of smiToScore method must be a string of SMILES.'
@@ -125,25 +144,11 @@ class SVS(nn.Module):
         data_set = InferenceDataset
         data_loader = DataLoader(data_set, batch_size = batch_size, shuffle=False)
         scores = np.empty(0)
+        device = self.device
         for i_batch,batch in enumerate(data_loader):
-            x = batch['feature'].float().cuda()
-            A = batch['adj'].float().cuda()
-            y = batch['label'].long().cuda()
+            x = batch['feature'].float().to(device)
+            A = batch['adj'].float().to(device)
+            y = batch['label'].long().to(device)
             scores = np.concatenate(scores, self.forward(x,A))
         return scores
 
-    def mols_to_graph_feature(self, mol_list):
-        save_dir = os.join(os.path.dirname(__file__), 'tmp')
-        os.mkdir(save_dir)
-        for idx, mol in enumerate(mol_list):
-            if mol:
-                padded_feature, padded_adj = self.mol_to_graph_feature(mol)
-                with open(f'{save_dir}/{idx}.pkl','wb') as fw:
-                    pickle.dump({'feature':padded_feature,
-                            'adj':padded_adj},
-                            fw)
-            else:
-                with open(f'{save_dir}/{idx}.pkl','wb') as fw:
-                    pickle.dump(None, fw)
-
-        return save_dir

@@ -1,4 +1,5 @@
 from rdkit import Chem
+from rdkit.Chem import inchi
 from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
@@ -14,6 +15,7 @@ import shutil
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 
+DATA_FORMAT = None
 def list_duplicates_of(seq,item):
     start_at = -1
     locs = []
@@ -103,15 +105,19 @@ def further_batch_reaction(reaction_result, rxn_objs):
     return reaction_result
 
 def initial_R_bag_check(targets_in_mol:list, reactant_bag:set):
-    canonicalized_smiles = [Smiles(mol) for mol in targets_in_mol]
+    global DATA_FORMAT
+    if DATA_FORMAT == 'smiles':
+        mol_in_text = [Smiles(mol) for mol in targets_in_mol]
+    elif DATA_FORMAT == 'inchikey':
+        mol_in_text = [inchi.MolToInchikey(mol) for mol in targets_in_mol]
     in_R_bag_smi,in_R_bag_mol = [], []
     otherwise_smi, otherwise_mol = [], []
-    for idx, smi in enumerate(canonicalized_smiles):
-        if smi in reactant_bag:
-            in_R_bag_smi.append(smi)
+    for idx, text in enumerate(mol_in_text):
+        if text in reactant_bag:
+            in_R_bag_smi.append(Smiles(targets_in_mol[idx]))
             in_R_bag_mol.append(targets_in_mol[idx])
         else:
-            otherwise_smi.append(smi)
+            otherwise_smi.append(Smiles(targets_in_mol[idx]))
             otherwise_mol.append(targets_in_mol[idx])
     return in_R_bag_smi, in_R_bag_mol, otherwise_smi, otherwise_mol
 
@@ -124,6 +130,7 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
       positives: 
       batch_reaction_result: 
     '''
+    global DATA_FORMAT
     positives = []
     diff = target_depth-current_depth
     if diff >0:
@@ -137,6 +144,8 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
                 precursor_R_bag_check = []
 
                 for smi in to_be_checked:
+                    if DATA_FORMAT == 'inchikey':
+                        smi = inchi.MolToInchikey(Mol(smi))
                     check = smi in reactant_bag
                     precursor_R_bag_check.append(check)
                     if precursor_R_bag_check.count(False) > limit_numb:
@@ -169,6 +178,8 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
                 precursor_R_bag_check = []
 
                 for smi in to_be_checked:
+                    if DATA_FORMAT == 'inchikey':
+                        smi = inchi.MolToInchikey(Mol(smi))
                     check = smi in reactant_bag
                     if not check:
                         break
@@ -327,7 +338,11 @@ def retrosyntheticAnalyzer(args):
     # 2. multiprocessing of do_retro_analysis
     log('  ----- Multiprocessing -----')
     with open(reactant_set_path, 'rb') as fr:
-        reactant_bag = pickle.load(fr)
+        reactant_data = pickle.load(fr)
+    data_format = reactant_data['format']
+    global DATA_FORMAT
+    DATA_FORMAT = data_format
+    reactant_bag = reactant_data['data']
     num_of_tasks = len(targets)//batch_size
     if len(targets) % batch_size != 0:
         num_of_tasks +=1

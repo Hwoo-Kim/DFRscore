@@ -131,7 +131,8 @@ class logger():
     def log_arguments(self, args):
         d = vars(args)
         for v in d:
-            self(f'  {v}: {d[v]}')
+            if v=='logger': continue
+            self(f'  {v}: {args[v]}')
 
 def retro_save_dir_setting(root, args):
     target_data_name = args.retro_target.split('/')[-1].split('.smi')[0]

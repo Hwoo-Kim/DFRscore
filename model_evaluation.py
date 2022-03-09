@@ -60,7 +60,7 @@ else:
 
 # 2. model inference
 print('\n##### Model Inference Phase #####')
-inf_data_dir = GAT_model_evaluation(data_dir=input_data_path, save_dir=save_directory, inference_args=args)
+inf_data_dir = model_evaluate(data_dir=input_data_path, save_dir=save_directory, inference_args=args)
 
 # 3. model evaluation
 print('\n##### Model Evaluation Phase #####')
