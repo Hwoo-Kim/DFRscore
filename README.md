@@ -66,5 +66,6 @@ python ./test_model.py
 ```
 
 ## Using trained model as a scoring metric for VS
-Getting a score directly from chemical SMILES is described in ```SVS/getSVS.py```.   
-For a fast test, you can simply run ```python SVS/getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
+Useful methods are described in ```SVS``` class in ```scripts/modelScripts/model.py``` 
+
+For a fast test, you can simply run ```python getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
