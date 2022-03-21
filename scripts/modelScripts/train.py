@@ -96,8 +96,6 @@ def train_SVS(args):
             max_num_atoms=args.max_num_atoms,
             num_class=args.max_step+1,
             dropout=args.dropout)
-    if args.load_model:
-        predictor.load_state_dict(torch.load(f'{save_dir}/GAT_model_{args.load_model}pt'))
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=args.gamma)
     lr = args.lr

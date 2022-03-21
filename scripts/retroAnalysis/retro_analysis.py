@@ -363,6 +363,7 @@ def retrosyntheticAnalyzer(args):
     log('  ----- Config information -----',
         f'  Target data path: {retro_target_path}',
         f'  Template data path: {template_path}',
+        f'  Using augmented template: {args.using_augmented_template}',
         f'  Reactant data path: {reactant_path}',
         f'  Depth: {args.depth}',
         f'  Number of target molecules: {args.num_molecules}',

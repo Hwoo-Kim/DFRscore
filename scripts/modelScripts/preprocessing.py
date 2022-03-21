@@ -39,7 +39,6 @@ def processing_data(data_dir,max_step,logger,num_data):
     logger(f'  Number of data for each class (Neg, pos1, pos2, ...):')
     for i in range(max_step+1):
         logger(f'  {len(smis_w_label[i])}\t', end='')
-    logger(f'  Given total number of data is: {num_data}')
     each_class_size  = num_data//(max_step*2)
     class_sizes = []
     for i in range(max_step+1):
@@ -47,6 +46,7 @@ def processing_data(data_dir,max_step,logger,num_data):
             class_sizes.append(each_class_size*max_step)
         else :
             class_sizes.append(each_class_size)
+    logger(f'  Given total number of data is: {num_data}')
     logger(f'  To achieve that, each class should be lager than (Neg, pos1, pos2, ...):')
     for i in range(max_step+1):
         logger(f'  {class_sizes[i]}', end='\t')
@@ -57,7 +57,7 @@ def processing_data(data_dir,max_step,logger,num_data):
             logger('   2) Generate more retro_analysis data')
             raise Exception('Error in data preproessing.')
     else:
-        logger('  Fine. Data preprocessing continued.')
+        logger('  Fine.')
 
     labeled_data = []
     for idx, each_class in enumerate(smis_w_label):
@@ -265,7 +265,7 @@ def train_data_preprocess(args):
     ratio = [8,1,1]         # train : val : test
     log('  Spliting data into train set, val set, and test set...')
     labeled_data = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of (smi,label)
-    log('  Done.')
+    log('   Data preprocessing continued.')
 
     # 2. Get Feature Tensors
     save_dir= os.path.join(preprocess_dir,'generated_data')

@@ -21,7 +21,6 @@ from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 
 
-onestep_by_reactions_cnt = 0
 class SynthesisTree:
     '''
     Tree structure to represent a synthesis tree to the given target smiles.
@@ -164,8 +163,6 @@ def duplicate_remove(list_of_list):
     return result
     
 def onestep_by_reactions(target_in_mol, rxn_objs):
-    global onestep_by_reactions_cnt
-    onestep_by_reactions_cnt += 0
     result = []
     for rxn_idx, rxn in enumerate(rxn_objs):
         if rxn == None:

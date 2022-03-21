@@ -22,7 +22,6 @@ class TrainDataset():
         key = self.key_list[idx]
         with open(f'{self.data_dir}/{key}','rb') as fr:
             data=pickle.load(fr)
-        #data['key']=key
         return data
 
 class InferenceDataset():

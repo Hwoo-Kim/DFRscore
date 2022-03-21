@@ -109,7 +109,7 @@ class logger():
     def __init__(self, log_file_path):
         self.log_file = log_file_path
         try:
-            with open(self.log_file, 'w') as w:
+            with open(self.log_file, 'a') as w:
                 pass
         except:
             print(f"Invalid log path {log_file_path}")
@@ -131,7 +131,7 @@ class logger():
     def log_arguments(self, args):
         d = vars(args)
         for v in d:
-            if v=='logger' or v=='root' or v=='save_dir': continue
+            if v=='logger' or v=='root' or v=='save_dir' or v=='save_name': continue
             self(f'  {v}: {d[v]}')
 
 def retro_save_dir_setting(root, args):

@@ -26,7 +26,6 @@ if __name__=='__main__':
     parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
     parser.add_argument("--data_preprocessing", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
     parser.add_argument('--num_data', type = int, help = 'number of data used in train/val/test.')
-    parser.add_argument('--load_model',type = int, default=0, help = 'epoch to load')
     # Default setting
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')

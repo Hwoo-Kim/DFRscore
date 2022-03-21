@@ -11,15 +11,14 @@ conda activate SVS
 
 cd ~/SVS
 
-data_dir=save/PubChem/retro_result/
-save_name=base
-data_preprocessing=data_base
+data_dir=save/PubChem/Prev_data/
+save_name=previous_data
+data_preprocessing=data_processed
 
 # Training parameters
-num_data=240000
+num_data=80000
 lr=0.0004
 num_epoch=300
-load_model=0
 
 decay_epoch=0
 n_conv_layer=4

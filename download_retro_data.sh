@@ -5,8 +5,8 @@ RETRO_TARGET_DIR=data/retro_target_data
 
 # Download reactant bag data
 #wget  -O $REACTANT_DIR/ZINC_reactants.smi
-cp /home/share/DATA/hwkim_SVS/reactang_bag.tar.gz $REACTANT_DIR
-tar zxf /home/share/DATA/hwkim_SVS/reactang_bag.tar.gz -C $REACTANT_DIR
+cp /home/share/DATA/hwkim_SVS/reactant_bag.tar.gz $REACTANT_DIR
+tar zxf /home/share/DATA/hwkim_SVS/reactant_bag.tar.gz -C $REACTANT_DIR
 echo "Reactant bag downloaded:" $REACTANT_DIR
 
 # Download retro target data
