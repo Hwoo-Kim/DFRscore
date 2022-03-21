@@ -3,7 +3,7 @@ from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from rdkit.Chem.rdmolops import GetFormalCharge
 from multiprocessing import Queue, Process,current_process
-from scripts import logger
+from scripts.utils import logger
 from sklearn.model_selection import train_test_split
 import numpy as np
 import queue

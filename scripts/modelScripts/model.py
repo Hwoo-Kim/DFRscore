@@ -8,9 +8,9 @@ from rdkit import Chem
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from rdkit.Chem.rdmolops import GetFormalCharge
 
-from layers import GraphAttentionLayer
-from preprocessing import get_atoms_feature
-from data import InferenceDataset
+from scripts.modelScripts.layers import GraphAttentionLayer
+from scripts.modelScripts.preprocessing import get_atoms_feature
+from scripts.modelScripts.data import InferenceDataset
 
 import os, sys, pickle
 import numpy as np

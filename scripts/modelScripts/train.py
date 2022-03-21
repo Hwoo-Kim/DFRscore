@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from scripts.model import GAT
-from data import GraphDataset
+from scripts.modelScrips.model import GAT
+from scripts.modelScrips.data import GraphDataset
 import scripts.utils as utils
 
 import numpy as np

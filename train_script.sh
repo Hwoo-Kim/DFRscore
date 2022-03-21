@@ -11,11 +11,12 @@ source activate SVS
 
 cd ~/SVS
 
-data_dir=data/PubChem/retro_result/
+data_dir=save/PubChem/retro_result/
 save_name=base
-data_preprocessing=base
+data_preprocessing=data_base
 
 # Training parameters
+num_data=250000
 lr=0.0004
 num_epoch=200
 

@@ -25,8 +25,8 @@ if __name__=='__main__':
     parser.add_argument('--data_dir', type = str, help = 'path to retro analysis result directory')
     parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
     parser.add_argument("--data_preprocessing", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
+    parser.add_argument('--num_data', type = str, help = 'number of data used in train/val/test.')
     # Default setting
-    parser.add_argument('--num_data', type = str, default=250000, help = 'number of data used in train/val/test.')
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')
     parser.add_argument('--max_num_atoms', type = int, default=64, help = 'maximum number of atoms')
