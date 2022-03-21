@@ -131,8 +131,8 @@ class logger():
     def log_arguments(self, args):
         d = vars(args)
         for v in d:
-            if v=='logger': continue
-            self(f'  {v}: {args[v]}')
+            if v=='logger' or v=='root' or v=='save_dir': continue
+            self(f'  {v}: {d[v]}')
 
 def retro_save_dir_setting(root, args):
     target_data_name = args.retro_target.split('/')[-1].split('.smi')[0]
@@ -149,15 +149,16 @@ def retro_save_dir_setting(root, args):
     return save_dir
 
 def train_save_dir_setting(args):
-    retro_data_path = os.path.normpath(args.data_dir)
-    data_dir = '/'.join(retro_data_path.split('/')[:-1])
-    save_dir = os.path.normpath(os.path.join(data_dir,args.save_name))
+    data_dir = os.path.normpath(args.data_dir)
+    retro_data_dir = '/'.join(data_dir.split('/')[:-1])
+    #data_dir = args.data_dir
+    save_dir = os.path.normpath(os.path.join(retro_data_dir,args.save_name))
     
     if os.path.exists(save_dir):
         i = 2
-        while os.path.exists(f'{save_dir}/{i}'):
+        while os.path.exists(f'{save_dir}{i}'):
             i+=1
-        save_dir = f'{save_dir}/{i}'
+        save_dir = f'{save_dir}{i}'
     os.mkdir(save_dir)
     return data_dir, save_dir
 

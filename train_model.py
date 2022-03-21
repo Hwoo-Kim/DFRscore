@@ -14,7 +14,7 @@ def main_train(args):
     args.logger(f'Model training save directory is:\n  {args.save_dir}')
     
     # 1. Training data preprocessing
-    train_data_preprocess(args=args)
+    args.data_dir = train_data_preprocess(args=args)
 
     # 2. model train
     train_SVS(args=args)
@@ -25,7 +25,8 @@ if __name__=='__main__':
     parser.add_argument('--data_dir', type = str, help = 'path to retro analysis result directory')
     parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
     parser.add_argument("--data_preprocessing", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
-    parser.add_argument('--num_data', type = str, help = 'number of data used in train/val/test.')
+    parser.add_argument('--num_data', type = int, help = 'number of data used in train/val/test.')
+    parser.add_argument('--load_model',type = int, default=0, help = 'epoch to load')
     # Default setting
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')
@@ -43,7 +44,6 @@ if __name__=='__main__':
     parser.add_argument('--lr',type = float, default=2e-4, help = 'learning rate')
     parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
     parser.add_argument('--decay_epoch',type = float, default=0, help = 'decaying starts epoch')
-    parser.add_argument('--load_model',type = int, default=0, help = 'epoch to load')
     args = parser.parse_args()
     main_train(args)
 

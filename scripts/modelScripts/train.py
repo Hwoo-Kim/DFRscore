@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from scripts.modelScrips.model import GAT
-from scripts.modelScrips.data import GraphDataset
+from scripts.modelScripts.model import SVS
+from scripts.modelScripts.data import TrainDataset
 import scripts.utils as utils
 
 import numpy as np
@@ -62,9 +62,10 @@ def test(model,loss_fn,test_data_loader):
 def train_SVS(args):
     # 0. initial setting
     data_dir = args.data_dir
-    save_dir = os.path.join(args.save_dir,f'/model_{args.data_preprocessing_name}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}')
+    #save_dir = os.path.join(args.save_dir,f'/model_{args.data_preprocessing}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}')
+    save_dir = args.save_dir
     log = args.logger
-    log('2. Model Training Phase')
+    log('\n2. Model Training Phase')
     # For myself
     '''
     import shutil
@@ -85,13 +86,14 @@ def train_SVS(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = utils.get_cuda_visible_devices(1)
 
     loss_fn = nn.CrossEntropyLoss(reduction='mean')
-    predictor = GAT(
+    predictor = SVS(
             conv_dim=args.conv_dim,
             fc_dim=args.fc_dim,
             n_GAT_layer=args.n_conv_layer,
             n_fc_layer=args.n_fc_layer,
             num_heads=args.num_heads,
             len_features=args.len_features,
+            max_num_atoms=args.max_num_atoms,
             num_class=args.max_step+1,
             dropout=args.dropout)
     if args.load_model:
@@ -109,18 +111,18 @@ def train_SVS(args):
     best_loss = 100000
     # 2. Training with validation
     train_data_loader = DataLoader(
-                    GraphDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='train'),
+                    TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='train'),
                     batch_size=args.batch_size,
                     shuffle = True,
                     num_workers=2
                     )
     val_data_loader = DataLoader(
-                    GraphDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='val'),
+                    TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='val'),
                     batch_size=args.batch_size,
                     shuffle = False
                     )
     test_data_loader = DataLoader(
-                    GraphDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
+                    TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
                     batch_size=args.batch_size,
                     shuffle = False
                     )

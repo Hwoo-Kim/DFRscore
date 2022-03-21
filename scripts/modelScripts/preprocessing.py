@@ -38,7 +38,7 @@ def processing_data(data_dir,max_step,logger,num_data):
     # handling data size
     logger(f'  Number of data for each class (Neg, pos1, pos2, ...):')
     for i in range(max_step+1):
-        logger(f'  {len(smis_w_label[i])}\t')
+        logger(f'  {len(smis_w_label[i])}\t', end='')
     logger(f'  Given total number of data is: {num_data}')
     each_class_size  = num_data//(max_step*2)
     class_sizes = []
@@ -51,7 +51,7 @@ def processing_data(data_dir,max_step,logger,num_data):
     for i in range(max_step+1):
         logger(f'  {class_sizes[i]}', end='\t')
     for i in range(max_step+1):
-        if smis_w_label[i] < class_sizes[i]:
+        if len(smis_w_label[i]) < class_sizes[i]:
             logger('  Fail. You can choose one of the following options:')
             logger('   1) Decrease the number of training data (args.num_data)')
             logger('   2) Generate more retro_analysis data')
@@ -81,8 +81,11 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
     ratio = np.array(ratio)
     ratio = ratio/np.sum(ratio)
     for k,v in all_data_dicts.items():
-        train, val_test = train_test_split(v, train_size=float(ratio[0])) 
-        val, test= train_test_split(val_test, train_size=float(ratio[1]/np.sum(ratio[1:])))
+        train,val,test = v[:int(len(v)*ratio[0])], \
+                v[int(len(v)*ratio[0]):int(len(v)*(ratio[0]+ratio[1]))], \
+                v[int(len(v)*(ratio[0]+ratio[1])):]
+        #train, val_test = train_test_split(v, train_size=float(ratio[0])) 
+        #val, test= train_test_split(val_test, train_size=float(ratio[1]/np.sum(ratio[1:])))
         train_key_dicts += train
         val_key_dicts += val
         test_key_dicts += test
@@ -99,15 +102,17 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
     for name in train_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        train[smi] = label
+        smi_with_label['train'][smi] = label
     for name in val_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        val[smi] = label
+        smi_with_label['val'][smi] = label
+        #val[smi] = label
     for name in test_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        test[smi] = label
+        smi_with_label['test'][smi] = label
+        #test[smi] = label
     with open(f'{preprocess_dir}/smi_with_label.pkl', 'wb') as fw:
         pickle.dump(smi_with_label, fw)
 
@@ -195,13 +200,15 @@ def get_graph_feature(data_list,
         padded_feature = torch.from_numpy(padded_feature)
         padded_adj = torch.from_numpy(padded_adj)
         if for_inference:
-            with open(f'{save_dir}/{smi}.pkl','wb') as fw:
-                pickle.dump({'feature':padded_feature,
+            with open(f'{save_dir}/{idx}.pkl','wb') as fw:
+                pickle.dump({'smi':smi,
+                        'feature':padded_feature,
                         'adj':padded_adj},
                         fw)
         else:
-            with open(f'{save_dir}/{label}_{smi}.pkl','wb') as fw:
-                pickle.dump({'feature':padded_feature,
+            with open(f'{save_dir}/{label}_{idx}.pkl','wb') as fw:
+                pickle.dump({'smi':smi,
+                        'feature':padded_feature,
                         'adj':padded_adj,
                         'label':label},
                         fw)
@@ -230,8 +237,8 @@ def get_atoms_feature(sssr, atom):
     return np.array(one_of_k_encoding(str(atom.GetSymbol()),['C','N','O','F','S','Cl','Br','I','B','P','ELSE'])+
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
-                    #one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    one_of_k_encoding(int(atom.GetFormalCharge()),[-2,-1,0,1,2,'ELSE'])+
+                    one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
+                    #one_of_k_encoding(int(atom.GetFormalCharge()),[-2,-1,0,1,2,'ELSE'])+
                     get_ring_inform(sssr,atom)+
                     [atom.GetIsAromatic()])
                     # 11+6+6+6+6+1 = 36
@@ -239,21 +246,21 @@ def get_atoms_feature(sssr, atom):
 # 3. Main functions
 def train_data_preprocess(args):
     # 1. Reading data
-    preprocess_dir = os.path.join(args.data_dir, args.data_preprocess_name)
+    preprocess_dir = os.path.join(args.data_dir, args.data_preprocessing)
     since = time.time()
-    log = logger(os.path.join(preprocess_dir), 'preprocessing.log')
     now = datetime.now()
     since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
-    log('1. Data preprocessing phase')
-    log(f'  Started at: {since_inform}')
-    log(f'  Data will be generated in: {preprocess_dir}')
-
     if os.path.exists(preprocess_dir):
-        log('  Processed data already exists.')
-        log('  Training data preprocessing finished.')
-        return True
+        print('\n1. Data preprocessing phase')
+        print('  Processed data already exists.')
+        print('  Training data preprocessing finished.')
+        return preprocess_dir
     else:
         os.mkdir(preprocess_dir)
+        log = logger(os.path.join(preprocess_dir, 'preprocessing.log'))
+        log('\n1. Data preprocessing phase')
+        log(f'  Started at: {since_inform}')
+        log(f'  Data will be generated in: {preprocess_dir}')
 
     ratio = [8,1,1]         # train : val : test
     log('  Spliting data into train set, val set, and test set...')
@@ -261,9 +268,9 @@ def train_data_preprocess(args):
     log('  Done.')
 
     # 2. Get Feature Tensors
-    save_dir= os.path.join(preprocess_dir,'/generated_data')
+    save_dir= os.path.join(preprocess_dir,'generated_data')
     os.mkdir(save_dir)
-    log(f'  Generating features...')
+    log(f'  Generating features...', end='')
     batch_size = 10000
     tasks = Queue()
     procs = []
@@ -281,7 +288,7 @@ def train_data_preprocess(args):
     for worker in range(args.num_cores):
         p = Process(
                 target=do_get_graph_feature,
-                args=(tasks,save_dir,args.max_num_atoms,args.len_features,False)
+                args=(tasks,save_dir,args.max_num_atoms,args.len_features)
                 )
         procs.append(p)
         p.start()
@@ -293,11 +300,11 @@ def train_data_preprocess(args):
     log('  Done.')
 
     # 3. Split into train/val/test and generate keys
-    log('  Generating keys...')
+    log('  Generating keys...', end='')
     generate_keys(save_dir, preprocess_dir,ratio)
     log('  Done.')
     log(f'  Elapsed time: {time.time()-since}')
-    return True
+    return preprocess_dir
 
 """
 def GAT_evaluation_data_generation(data_dir, save_dir, evaluation_args):

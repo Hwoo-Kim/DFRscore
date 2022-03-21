@@ -7,7 +7,7 @@
 ##### Run ##### 
 date
 
-source activate SVS
+conda activate SVS
 
 cd ~/SVS
 
@@ -16,12 +16,13 @@ save_name=base
 data_preprocessing=data_base
 
 # Training parameters
-num_data=250000
+num_data=240000
 lr=0.0004
-num_epoch=200
+num_epoch=300
+load_model=0
 
 decay_epoch=0
-n_conv_layer=5
+n_conv_layer=4
 conv_dim=256
 fc_dim=128
 len_features=36
@@ -33,6 +34,7 @@ python train_model.py --data_dir $data_dir \
     --lr $lr --decay_epoch $decay_epoch \
     --n_conv_layer $n_conv_layer \
     --conv_dim $conv_dim \
-    --fc_dim $fc_dim 
+    --fc_dim $fc_dim  \
+    --num_data $num_data
     
 date
