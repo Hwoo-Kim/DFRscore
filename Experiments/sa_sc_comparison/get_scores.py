@@ -119,6 +119,11 @@ def getSCScore(smis:list):
     '''
     import sys 
     import_path = op.join(op.dirname(op.abspath(__file__)), 'scscore/scscore/')
+    if not op.exists(import_path):
+        cwd = os.getcwd()
+        os.chdir(op.dirname(op.abspath(__file__)))
+        os.system('git clone https://github.com/connorcoley/scscore.git')
+        os.chdir(cwd)
     if not import_path in sys.path:
         sys.path.append(import_path)
     from standalone_model_numpy import SCScorer
