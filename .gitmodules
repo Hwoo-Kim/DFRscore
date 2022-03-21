@@ -1,0 +1,3 @@
+[submodule "Experiments/sa_sc_comparison/scscore"]
+	path = Experiments/sa_sc_comparison/scscore
+	url = https://github.com/connorcoley/scscore.git

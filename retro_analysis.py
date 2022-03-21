@@ -40,6 +40,6 @@ if __name__=='__main__':
     parser.add_argument("--save_name", help='directory where all the retro results will be saved', default='save', type=str)
     parser.add_argument("--path", help='whether restoring synthesis path or not. if Ture, more time required.', default=False, type=bool)
     parser.add_argument("--exclude_in_R_bag", help='whether excluding molecules in retro_target file included in R bag', default=True, type=bool)
-    parser.add_argument("--batch_size", help='batch size for retrosynthetic analysis', default=63, type=int)
+    parser.add_argument("--batch_size", help='batch size for retrosynthetic analysis', default=100, type=int)
     args = parser.parse_args()
     retrosynthetic_analysis(args)

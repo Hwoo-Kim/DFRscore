@@ -2,6 +2,7 @@ from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 import math
 import pickle
+import os
 import os.path as op
 import numpy as np
 
