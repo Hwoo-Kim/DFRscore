@@ -34,12 +34,12 @@ And go to [Train and Test](#train-and-test).
 
 2. Or, if you want to get the training data by running our retro-anaylsis tool followed by model training, you can download the ingredients with:
 ```
-./download_retro_and_train_data.sh
+./download_retro_data.sh
 ```
 And go to [Retro-analysis](#retro-analysis).
 
 ## Retro-analysis
-After downloading the data by ```./download_training_data.sh```, you can run retro-analysis tool by:
+After downloading the data by ```./download_retro_data.sh```, you can run retro-analysis tool by:
 ```
 python retro_analysis.py \
     --template data/template/retro_template.pkl \
@@ -52,7 +52,7 @@ python retro_analysis.py \
 And go to [Train and Test](#train-and-test).
 
 ## Train and Test
-After getting data for training by ```./download_retro_data.sh``` or manually running ```./retro_analysis.py```,   
+After getting data for training by ```./download_train_data.sh``` or manually running ```./retro_analysis.py```,   
 
 ### Train
 You can train a new model by:
