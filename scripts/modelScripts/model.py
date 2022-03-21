@@ -26,6 +26,14 @@ import numpy as np
 #NUM_CORES= 4
 
 class SVS(nn.Module):
+    """
+    Model to predict synthesizability for virtual screening.
+    You can load previously trained model using 'restore' method.
+    If you want to get SVS score from this model,
+      1) model = SVS(args)  (if you have CUDA system, you can use SVS(args).cuda())
+      2-1) From SMILES string: score = model.smiToScore(<SMILES>) / scores = model.smiListToScores(<list of SMILES>)
+      2-2) From RDKit Molecule object: score = model.molToScore(<Molecule object>) / scores = model.molListToScores(<list of Molecule objects>)
+    """
     def __init__(
             self,
             conv_dim,
