@@ -1,11 +1,34 @@
-import sys, os
+import os, sys
+from multiprocessing import Lock, Process, Queue, current_process
+import queue
+from tqdm import tqdm
 from rdkit import Chem
+from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
-from tqdm import tqdm
-from multiprocessing import Process, Queue, current_process
-import queue
-import time
+#from rdkit.Chem.AllChem import CalcNumRotatableBonds
+#from rdkit.Chem.Descriptors import TPSA
+#from rdkit.Chem.Lipinski import NumHAcceptors, NumHDonors
+from rdkit.Chem.Descriptors import ExactMolWt
+from rdkit.Chem.EnumerateStereoisomers import GetStereoisomerCount
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.*')
+import random, time
+
+def MolWt(mol):
+    return ExactMolWt(mol) < 600
+
+def Stereo(mol):
+    return GetStereoisomerCount(mol) == 1       # only molecules all the stereo configuraion are specified.
+
+def NoStar(s):
+    return s.count('*') == 0
+
+def OneMol(s):
+    return s.count('.') == 0
+
+def Sanitize(mol):
+    return int(Chem.SanitizeMol(mol, catchErrors=True))==0
 
 def OrganicSubset(mol):
     organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
@@ -28,40 +51,46 @@ def do_job(tasks):
             iterator = smiles
             if ps_numb ==0: iterator = tqdm(smiles, total = len(smiles))
             for s in iterator:
+                if not OneMol(s): continue
+                if not NoStar(s): continue
                 try: mol = Mol(s)
                 except: continue
+                if mol == None: continue
+                if not Stereo(mol): continue
+                if not MolWt(mol): continue
+                if not Sanitize(mol): continue
                 if not OrganicSubset(mol): continue
-                #try: s = Smiles(mol)
-                #except: continue
-                ms.append(s +'\n')
+                ms.append(Smiles(mol)+'\n')
             
             with open(dir_name + "filtered_%d.txt" %(ps_numb), 'w') as fw:
                 fw.writelines(ms)
     return True
 
-def unifying_files(target_dir:str):
+def joining_files(target_dir:str):
     files = os.listdir(target_dir)
     smis = []
-    with open('canonicalized.smi', 'w') as fw:
-        for file_name in files:
-            with open(target_dir + file_name, 'r') as fr:
-                #smis += fr.read().splitlines()
-                smis += fr.readlines()
-        smis = list(set(smis))
+    for file_name in files:
+        with open(target_dir + file_name, 'r') as fr:
+            smis += fr.readlines()
+    with open('filtered.smi', 'w') as fw:
         fw.writelines(smis)
-    print(f'After filtering: {len(smis)}')
+
+    import shutil
+    shutil.rmtree(target_dir)
+
     return True
 
-def main(numb_cores:int, target_smiles:list):
+def main(target_smiles:list, numb_cores:int):
     number_of_processes = numb_cores
     tasks_to_accomplish = Queue()
     processes = []
-    print(f'Before filtering:\n  {len(target_smiles)}')
+    target_len = len(target_smiles)
+    print(f'The number of target molecules:\n  {target_len}')
 
     # generating scratch folder
     i = 1
     while True:
-        dir_name = f'scratch{i}/'
+        dir_name = f'tmp{i}/'
         try:
             os.mkdir(dir_name)
         except FileExistsError as e:
@@ -72,7 +101,7 @@ def main(numb_cores:int, target_smiles:list):
 
     # creating tasks
     for task_idx in range(number_of_processes):
-        args = (task_idx, target_smiles[int(len(target_smiles)*task_idx/numb_cores):int(len(target_smiles)*(task_idx+1)/numb_cores)], dir_name)
+        args = (task_idx, target_smiles[int(target_len*task_idx/numb_cores):int(target_len*(task_idx+1)/numb_cores)], dir_name)
         tasks_to_accomplish.put(args)
 
     # creating processes
@@ -81,7 +110,7 @@ def main(numb_cores:int, target_smiles:list):
         p = Process(target=do_job, args=(tasks_to_accomplish,))
         processes.append(p)
         p.start()
-        time.sleep(0.5)
+        time.sleep(0.1)
     print("All the processes have started w/o any problem.")
 
     # completing process
@@ -89,13 +118,16 @@ def main(numb_cores:int, target_smiles:list):
         p.join()
 
     # unifying files
-    unifying_files(dir_name)
+    joining_files(dir_name)
 
     return True
 
 if __name__ == '__main__':
     target_file = sys.argv[1]
-    with open(sys.argv[1], 'r') as fr:
-        smis=fr.read().splitlines()
-    numb_cores = 16
-    main(numb_cores, smis)
+    try:
+        numb_cores = int(sys.argv[2])
+    except:
+        numb_cores = 1
+    with open(target_file, 'r') as fr:
+        smis = fr.read().splitlines()
+    main(smis, numb_cores)

@@ -21,7 +21,7 @@ def canonicalize_smiles(smis, l):
     l.append(can_smis)
     return True
 
-def R_set_generator(args, use_inchikey=True, canonicalize=True):
+def R_set_generator(args, use_inchikey=False, canonicalize=False):
     """
     Molecules in args.reactant file are saved in SMILES format.
     1) if 'use_inchikey' is True, all the chemicals will be saved in InchiKey format.

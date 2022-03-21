@@ -1,1 +1,25 @@
-zz
+All files were filtered by ./filter.py
+1. PubChem (randomly selected 20,000,000 molecules from original file)
+  https://pubchem.ncbi.nlm.nih.gov
+  20,000,000 -> 10,684,200
+2. ChEMBL
+  https://www.ebi.ac.uk/chembl/
+  1,941,410 -> 1,285,904    
+3. ZINC (randomly selected 3,000,000 molecules from original file)
+  https://zinc.docking.org
+  3,000,000 -> 2,871,548
+4. MOSES
+  https://github.com/molecularsets/moses
+  1,760,737 -> 1,172,206
+5. GDBChEMBL
+  https://www.frontiersin.org/articles/10.3389/fchem.2020.00046/full
+  9,978,095 -> 496,840
+6. GDBMedChem
+  https://gdb.unibe.ch/downloads/
+  9,994,112 -> 1,665,062
+7. ARAE
+  https://pubs.acs.org/doi/10.1021/acs.jcim.9b00694
+  1,000,000 -> 774,162
+8. GGM (using 100,000 scaffolds, 5 generation per scaffold, excluding in train_data)
+  https://pubs.rsc.org/en/content/articlelanding/2020/SC/C9SC04503A
+  402,527 -> 394,623  
