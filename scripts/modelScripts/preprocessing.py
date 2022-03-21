@@ -299,6 +299,7 @@ def train_data_preprocess(args):
     log(f'  Elapsed time: {time.time()-since}')
     return True
 
+"""
 def GAT_evaluation_data_generation(data_dir, save_dir, evaluation_args):
     # 1. Reading data
     each_class_size = evaluation_args.each_class_size
@@ -339,4 +340,4 @@ def GAT_inference_data_generation(data_path, save_dir, inference_args):
     logger('\tDone.')
 
     return working_dir
-
+"""

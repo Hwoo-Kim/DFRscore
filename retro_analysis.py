@@ -31,7 +31,7 @@ def retrosynthetic_analysis(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", help='path to retrosynthetic template file', type=str)
-    parser.add_argument("--using_augmented_template", help='whether using augmented template or not', default=True, type=bool)
+    parser.add_argument("--using_augmented_template", help='whether using augmented template or not', default=False, type=bool)
     parser.add_argument("--reactant", help='path to reactant bag smiles file', type=str)
     parser.add_argument("--retro_target", help='path to retrosynthetic target smiles file', type=str)
     parser.add_argument("--depth", help='retrosynthetic analysis max depth', type=int)

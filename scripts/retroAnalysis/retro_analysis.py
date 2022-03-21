@@ -110,7 +110,6 @@ def further_batch_reaction(reaction_result, rxn_objs):
         tmp_del = []
         for retro_list in retro_lists:
             for intermediate in retro_list:
-                #TODO: retro_list의 첫번째것만 쓰면 되지 않을까?
                 try:
                     intermediate_in_mol = Mol(intermediate)
                 except:
@@ -240,7 +239,6 @@ def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:se
     Returns:
       True 
     '''
-    global log
     s = time.time()
     rxn_objects = []
     for rxn in reactions:
@@ -262,9 +260,6 @@ def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:se
 
     # 1. depth = 1 operation
     reaction_result = first_batch_reaction(targets_in_smiles, targets_in_mol, rxn_objects)
-    log('depth=1')
-    log(reaction_result)
-    log(len(list(reaction_result.values())[0]))
     positive_each_depth, curated_reaction_result= R_bag_check(reaction_result, reactant_bag, 1, depth)
     positives_dict[1] = positive_each_depth
     if depth == 1:
@@ -281,18 +276,12 @@ def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:se
     for current_depth in range(depth-1):
         current_depth += 2
         if current_depth != depth:
-            log(f'depth={current_depth}')
             reaction_result = further_batch_reaction(curated_reaction_result, rxn_objects)
-            log(reaction_result)
-            log(len(list(reaction_result.values())[0]))
             positive_each_depth, curated_reaction_result= R_bag_check(reaction_result, reactant_bag, current_depth, depth)
             positives_dict[current_depth] = positive_each_depth
             continue
         else:
-            log(f'depth={current_depth}')
             reaction_result = further_batch_reaction(curated_reaction_result, rxn_objects)
-            log(reaction_result)
-            log(len(list(reaction_result.values())[0]))
             positive_each_depth, _ = R_bag_check(reaction_result, reactant_bag, current_depth, depth)
             positives_dict[current_depth] = positive_each_depth
             break

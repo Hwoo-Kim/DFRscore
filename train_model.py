@@ -23,8 +23,8 @@ def main_train(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type = str, help = 'path to retro analysis result directory')
-    parser.add_argument('--model_save_name', type = str, help = "model's name to be saved as")
-    parser.add_argument("--data_preprocessing_name", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
+    parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
+    parser.add_argument("--data_preprocessing", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
     # Default setting
     parser.add_argument('--num_data', type = str, default=250000, help = 'number of data used in train/val/test.')
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')

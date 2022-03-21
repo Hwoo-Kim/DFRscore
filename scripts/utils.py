@@ -149,9 +149,9 @@ def retro_save_dir_setting(root, args):
     return save_dir
 
 def train_save_dir_setting(args):
-    retro_data_path = args.data_dir
+    retro_data_path = os.path.normpath(args.data_dir)
     data_dir = '/'.join(retro_data_path.split('/')[:-1])
-    save_dir = os.path.normpath(os.path.join(data_dir,args.model_save_name))
+    save_dir = os.path.normpath(os.path.join(data_dir,args.save_name))
     
     if os.path.exists(save_dir):
         i = 2
