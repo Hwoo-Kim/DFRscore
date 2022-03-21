@@ -7,7 +7,7 @@ from scripts.modelScripts.data import TrainDataset
 import scripts.utils as utils
 
 import numpy as np
-import json
+import pickle
 import os
 import sys
 import random
@@ -171,8 +171,8 @@ def train_SVS(args):
         f'  Best epoch: {best_epoch}',
         f'  Best loss: {best_loss}',
         f'  Decayed_lr: {lr}')
-    with open(f'{save_dir}/loss_history.json', 'w') as fw:
-        json.dump({'train': train_loss_history, 'val':val_loss_history}, fw)
+    with open(f'{save_dir}/loss_history.pkl', 'wb') as fw:
+        pickle.dump({'train': train_loss_history, 'val':val_loss_history}, fw)
 
     # 4. Test phase
     predictor.eval()
