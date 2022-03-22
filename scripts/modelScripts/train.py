@@ -65,7 +65,7 @@ def train_SVS(args):
     #save_dir = os.path.join(args.save_dir,f'/model_{args.data_preprocessing}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}')
     save_dir = args.save_dir
     log = args.logger
-    log('\n2. Model Training Phase')
+    log('2. Model Training Phase')
     # For myself
     '''
     import shutil
@@ -102,6 +102,7 @@ def train_SVS(args):
     predictor.cuda()
     log('  ----- Train Config Information -----')
     #log(f' data dir: {data_dir}')
+    log('  save_dir: {save_dir}')
     log.log_arguments(args)
     log()
     log('  ----- Training Log -----')
@@ -157,7 +158,7 @@ def train_SVS(args):
             f'   epoch time: {epoch_end-epoch_start:.2f}')
         if i > args.decay_epoch:
             scheduler.step()
-            lr *= args.gamma
+            lr *= args.gamma        # to report
 
     # 3. Finish and save the result
     torch.save(best_model,f'{save_dir}/GAT_best_model_{str(best_epoch)}.pt')

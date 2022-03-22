@@ -11,7 +11,8 @@ class TrainDataset():
         self.mode = mode
         self.data_dir = data_dir
         self.key_dir = key_dir
-        self.data_list = os.listdir(data_dir)
+        #self.data_list = os.listdir(data_dir)
+        print()
         with open(f'{key_dir}/{mode}_keys.pkl','rb') as fr:
             self.key_list = pickle.load(fr) # list of keys
 

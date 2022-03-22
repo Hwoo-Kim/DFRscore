@@ -23,7 +23,7 @@ def processing_data(data_dir,max_step,logger,num_data):
     smis_w_label = []
     for i in range(max_step+1):
         label = float(i)
-        if i == 0.0:
+        if i == 0:
             with open(f'{data_dir}/neg{max_step}.smi', 'r') as fr:
                smis = fr.read().splitlines()
         else:
@@ -46,7 +46,7 @@ def processing_data(data_dir,max_step,logger,num_data):
             class_sizes.append(each_class_size*max_step)
         else :
             class_sizes.append(each_class_size)
-    logger(f'  Given total number of data is: {num_data}')
+    logger(f'\n  Given total number of data is: {num_data}')
     logger(f'  To achieve that, each class should be lager than (Neg, pos1, pos2, ...):')
     for i in range(max_step+1):
         logger(f'  {class_sizes[i]}', end='\t')
@@ -156,18 +156,20 @@ def read_data(data_path):
     return smis
 
 # 2. Graph feature generating functions
-def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features):
+def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
     while True:
         try:
             args = tasks.get(timeout=1)
         except queue.Empty:
             break
         else:
-            data_list = args[0]
+            data_list, task_idx = args[0], args[1]
             get_graph_feature(data_list,
                     save_dir,
                     max_num_atoms,
-                    len_features
+                    len_features,
+                    batch_size,
+                    task_idx 
                     )
     return
 
@@ -175,9 +177,12 @@ def get_graph_feature(data_list,
                 save_dir,
                 max_num_atoms,
                 len_features,
+                batch_size,
+                task_idx,
                 for_inference=False
                 ):
     for idx, line in enumerate(data_list):
+        idx += batch_size*task_idx
         line = line.rstrip()
         if for_inference:
             smi = line
@@ -251,21 +256,21 @@ def train_data_preprocess(args):
     now = datetime.now()
     since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
     if os.path.exists(preprocess_dir):
-        print('\n1. Data preprocessing phase')
+        print('1. Data preprocessing phase')
         print('  Processed data already exists.')
         print('  Training data preprocessing finished.')
         return preprocess_dir
     else:
         os.mkdir(preprocess_dir)
         log = logger(os.path.join(preprocess_dir, 'preprocessing.log'))
-        log('\n1. Data preprocessing phase')
+        log('1. Data preprocessing phase')
         log(f'  Started at: {since_inform}')
         log(f'  Data will be generated in: {preprocess_dir}')
 
     ratio = [8,1,1]         # train : val : test
-    log('  Spliting data into train set, val set, and test set...')
-    labeled_data = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of (smi,label)
-    log('   Data preprocessing continued.')
+    log()
+    labeled_data = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of 'smi\tlabel\n'
+    log('  Data preprocessing continued.')
 
     # 2. Get Feature Tensors
     save_dir= os.path.join(preprocess_dir,'generated_data')
@@ -281,14 +286,14 @@ def train_data_preprocess(args):
     for batch_idx in range(num_batch):
         #indices = list(range(batch_size*batch_idx, batch_size*(batch_idx+1)))
         #task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], indices)
-        task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)],)
+        task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], batch_idx)
         tasks.put(task)
 
     # Creating Procs
-    for worker in range(args.num_cores):
+    for p_idx in range(args.num_cores):
         p = Process(
                 target=do_get_graph_feature,
-                args=(tasks,save_dir,args.max_num_atoms,args.len_features)
+                args=(tasks,save_dir,args.max_num_atoms,args.len_features, batch_size)
                 )
         procs.append(p)
         p.start()
@@ -303,7 +308,7 @@ def train_data_preprocess(args):
     log('  Generating keys...', end='')
     generate_keys(save_dir, preprocess_dir,ratio)
     log('  Done.')
-    log(f'  Elapsed time: {time.time()-since}')
+    log(f'  Elapsed time: {time.time()-since}\n')
     return preprocess_dir
 
 """
