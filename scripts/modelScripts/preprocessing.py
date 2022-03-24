@@ -59,6 +59,8 @@ def processing_data(data_dir,max_step,logger,num_data):
             raise Exception('Error in data preproessing.')
     else:
         logger('  Fine.')
+    global DATA_SPLIT_SEED
+    logger(f'  Data were randomly chosen using random seed: {DATA_SPLIT_SEED}')
 
     labeled_data = []
     for idx, each_class in enumerate(smis_w_label):
