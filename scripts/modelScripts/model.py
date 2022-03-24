@@ -72,10 +72,7 @@ class SVS(nn.Module):
     def forward(self,x,A):
         x = self.embedding(x)
         for layer in self.GAT_layers:
-            if self.residual:
-                x = x + layer(x, A)         # output was already applied with ELU.
-            else:
-                x = layer(x, A)         # output was already applied with ELU.
+            x = layer(x, A)         # output was already applied with ELU.
         x = retval = x.mean(1)
         for layer in self.fc_layers:
             x = layer(x)

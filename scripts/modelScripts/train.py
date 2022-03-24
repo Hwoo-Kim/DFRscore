@@ -97,12 +97,19 @@ def train_SVS(args):
             num_class=args.max_step+1,
             dropout=args.dropout)
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=args.gamma)
+    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=args.gamma)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                    optimizer,
+                    factor=args.factor,
+                    patience=args.patience,
+                    threshold=args.threshold,
+                    min_lr=args.min_lr
+                    )
     lr = args.lr
     predictor.cuda()
     log('  ----- Train Config Information -----')
     #log(f' data dir: {data_dir}')
-    log('  save_dir: {save_dir}')
+    log(f'  save_dir: {save_dir}')
     log.log_arguments(args)
     log()
     log('  ----- Training Log -----')
@@ -156,9 +163,15 @@ def train_SVS(args):
             f'   training loss: {train_epoch_loss}',
             f'   val loss: {val_epoch_loss}',
             f'   epoch time: {epoch_end-epoch_start:.2f}')
-        if i > args.decay_epoch:
-            scheduler.step()
-            lr *= args.gamma        # to report
+        # For ExponentialLR
+        #if i > args.decay_epoch:
+            #scheduler.step()
+        # For ReduceLROnPlateau
+        scheduler.step(val_epoch_loss)
+        if optimizer.param_groups[0]["lr"] < lr:
+            lr = float(optimizer.param_groups[0]["lr"])
+            log(f'   scheduler has reduced lr, current is: {lr}')
+
 
     # 3. Finish and save the result
     torch.save(best_model,f'{save_dir}/GAT_best_model_{str(best_epoch)}.pt')
@@ -171,7 +184,7 @@ def train_SVS(args):
         '  time passed: [%dh:%dm:%ds]' %(time_elapsed//3600, (time_elapsed%3600)//60, time_elapsed%60),
         f'  Best epoch: {best_epoch}',
         f'  Best loss: {best_loss}',
-        f'  Decayed_lr: {lr}')
+        f'  Decayed_lr: {optimizer.param_groups[0]["lr"]}')
     with open(f'{save_dir}/loss_history.pkl', 'wb') as fw:
         pickle.dump({'train': train_loss_history, 'val':val_loss_history}, fw)
 

@@ -30,7 +30,7 @@ if __name__=='__main__':
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')
     parser.add_argument('--max_num_atoms', type = int, default=64, help = 'maximum number of atoms')
-    parser.add_argument('--batch_size', type = int, default=64, help = 'batch size')
+    parser.add_argument('--batch_size', type = int, default=128, help = 'batch size')
     parser.add_argument('--num_threads', type = int, default=2, help = 'the number of threads')
     parser.add_argument('--len_features', type = int, default=36, help = 'dim of atomic feature')
     parser.add_argument('--n_conv_layer', type = int, default=5, help = 'number of convolution layers')
@@ -41,8 +41,14 @@ if __name__=='__main__':
     parser.add_argument('--dropout', type = float, default=0.2, help = 'dropout for edge drop and normal dropout')
     parser.add_argument('--num_epoch',type = int, default=300, help = 'number of epochs')
     parser.add_argument('--lr',type = float, default=2e-4, help = 'learning rate')
-    parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
-    parser.add_argument('--decay_epoch',type = int, default=0, help = 'decaying starts epoch')
+    # For ExponentialLR
+    #parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
+    #parser.add_argument('--decay_epoch',type = int, default=0, help = 'decaying starts epoch')
+    # For ReduceLROnPlateau
+    parser.add_argument('--factor',type = float, default=0.5, help = 'decreasing factor')
+    parser.add_argument('--patience',type = int, default=5, help = 'number of epochs with no improvement after which learning rate will be reduced')
+    parser.add_argument('--threshold',type = float, default=1e-3, help = 'Threshold for measuring the new optimum, to only focus on significant changes')
+    parser.add_argument('--min_lr',type = float, default=1e-7, help = ' A lower bound on the learning rate of all param groups')
     args = parser.parse_args()
     main_train(args)
 
