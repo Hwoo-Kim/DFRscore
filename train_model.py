@@ -46,7 +46,7 @@ if __name__=='__main__':
     #parser.add_argument('--decay_epoch',type = int, default=0, help = 'decaying starts epoch')
     # For ReduceLROnPlateau
     parser.add_argument('--factor',type = float, default=0.5, help = 'decreasing factor')
-    parser.add_argument('--patience',type = int, default=5, help = 'number of epochs with no improvement after which learning rate will be reduced')
+    parser.add_argument('--patience',type = int, default=10, help = 'number of epochs with no improvement after which learning rate will be reduced')
     parser.add_argument('--threshold',type = float, default=1e-3, help = 'Threshold for measuring the new optimum, to only focus on significant changes')
     parser.add_argument('--min_lr',type = float, default=1e-7, help = ' A lower bound on the learning rate of all param groups')
     args = parser.parse_args()
