@@ -45,7 +45,7 @@ class SVS(nn.Module):
             max_num_atoms,
             num_class,
             dropout:float,
-            residual=True
+            residual=False
             ):
         super().__init__()
         self.max_num_atoms = max_num_atoms
@@ -72,7 +72,10 @@ class SVS(nn.Module):
     def forward(self,x,A):
         x = self.embedding(x)
         for layer in self.GAT_layers:
-            x = layer(x, A)         # output was already applied with ELU.
+            if self.residual:
+                x = x + layer(x, A)         # output was already applied with ELU.
+            else:
+                x = layer(x, A)         # output was already applied with ELU.
         x = retval = x.mean(1)
         for layer in self.fc_layers:
             x = layer(x)
