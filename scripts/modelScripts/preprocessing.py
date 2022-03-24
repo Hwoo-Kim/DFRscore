@@ -15,7 +15,8 @@ import random
 import time
 from datetime import datetime
 
-SPLIT_SEED = 1024
+DATA_SPLIT_SEED = 1024
+random.seed(DATA_SPLIT_SEED)
 # 1. Data splitting functions
 # 1-1. For training data
 def processing_data(data_dir,max_step,logger,num_data):
