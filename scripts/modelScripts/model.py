@@ -44,8 +44,7 @@ class SVS(nn.Module):
             len_features,
             max_num_atoms,
             num_class,
-            dropout:float,
-            residual=False
+            dropout:float
             ):
         super().__init__()
         self.max_num_atoms = max_num_atoms
@@ -55,7 +54,6 @@ class SVS(nn.Module):
                 [GraphAttentionLayer(
                     emb_dim=conv_dim,
                     num_heads=num_heads,
-                    dropout=dropout,
                     alpha=0.2,
                     bias=True
                     )
@@ -67,14 +65,14 @@ class SVS(nn.Module):
         self.pred_layer = nn.Linear(fc_dim,num_class)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        self.residual = residual
 
     def forward(self,x,A):
         x = self.embedding(x)
         for layer in self.GAT_layers:
             x = layer(x, A)         # output was already applied with ELU.
+            x = self.dropout(x)
         x = retval = x.mean(1)
-        for layer in self.fc_layers:
+        for idx, layer in enumerate(self.fc_layers):
             x = layer(x)
             x = self.relu(x)
             x = self.dropout(x)

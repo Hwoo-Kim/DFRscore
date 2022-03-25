@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N SVS_nConv4_lr0_001_batch128
-#PBS -l nodes=gnode2:ppn=4:gpu
+#PBS -N train_SVS_nConv6_lr0_0004_conv256_fc128_8HEADS_batch256
+#PBS -l nodes=gnode8:ppn=4:gpu
 #PBS -l walltime=7:00:00:00 
 
 ##### Run ##### 
@@ -11,18 +11,17 @@ source activate SVS
 
 cd ~/SVS
 
-data_dir=save/PubChem/Prev_data/
-model_save_name=nConv4_lr0_001_batch128
-data_preprocessing=basic_processing
+data_dir=save/PubChem4M/retro_result/
+model_save_name=SVS_nConv6_lr0_0004_conv256_fc128_8HEADS_batch256
+data_preprocessing=random_seed_1024
 
 # Training parameters
 num_data=240000
-num_epoch=500
-lr=0.001
-threshold=0.001
-batch_size=128
+num_epoch=400
+lr=0.0004
+batch_size=256
 
-n_conv_layer=4
+n_conv_layer=6
 n_fc_layer=4
 conv_dim=256
 fc_dim=128
@@ -33,6 +32,7 @@ python train_model.py --data_dir $data_dir \
     --data_preprocessing $data_preprocessing \
     --num_data $num_data \
     --num_epoch $num_epoch \
+    --num_heads $num_heads \
     --lr $lr  --threshold $threshold \
     --batch_size $batch_size \
     --n_conv_layer $n_conv_layer \

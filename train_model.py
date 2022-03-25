@@ -35,15 +35,15 @@ if __name__=='__main__':
     parser.add_argument('--len_features', type = int, default=36, help = 'dim of atomic feature')
     parser.add_argument('--n_conv_layer', type = int, default=5, help = 'number of convolution layers')
     parser.add_argument('--n_fc_layer', type = int, default=4, help = 'number of fully connected layers')
-    parser.add_argument('--num_heads', type = int, default=8, help = 'number of heads for multi-head attention')
+    parser.add_argument('--num_heads', type = int, default=1, help = 'number of heads for multi-head attention')
     parser.add_argument('--conv_dim', type = int, default=256, help = 'graph conv layer hidden dimension')
     parser.add_argument('--fc_dim', type = int, default=128, help = 'fc layer hidden dimension')
     parser.add_argument('--dropout', type = float, default=0.2, help = 'dropout for edge drop and normal dropout')
     parser.add_argument('--num_epoch',type = int, default=300, help = 'number of epochs')
     parser.add_argument('--lr',type = float, default=2e-4, help = 'learning rate')
     # For ExponentialLR
-    #parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
-    #parser.add_argument('--decay_epoch',type = int, default=0, help = 'decaying starts epoch')
+    parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
+    parser.add_argument('--decay_epoch',type = int, default=0, help = 'decaying starts epoch')
     # For ReduceLROnPlateau
     parser.add_argument('--factor',type = float, default=0.5, help = 'decreasing factor')
     parser.add_argument('--patience',type = int, default=10, help = 'number of epochs with no improvement after which learning rate will be reduced')

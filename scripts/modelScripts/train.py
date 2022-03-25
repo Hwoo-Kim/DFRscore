@@ -29,7 +29,6 @@ def train(model,loss_fn,optimizer,train_data_loader):
         loss = loss_fn(y_pred,y)
         optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         train_loss_list.append(loss.data.cpu().numpy())
     return train_loss_list
@@ -97,7 +96,6 @@ def train_SVS(args):
             num_class=args.max_step+1,
             dropout=args.dropout)
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
-    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=args.gamma)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                     optimizer,
                     factor=args.factor,
@@ -163,10 +161,6 @@ def train_SVS(args):
             f'   training loss: {train_epoch_loss}',
             f'   val loss: {val_epoch_loss}',
             f'   epoch time: {epoch_end-epoch_start:.2f}')
-        # For ExponentialLR
-        #if i > args.decay_epoch:
-            #scheduler.step()
-        # For ReduceLROnPlateau
         scheduler.step(val_epoch_loss)
         if optimizer.param_groups[0]["lr"] < lr:
             lr = float(optimizer.param_groups[0]["lr"])
