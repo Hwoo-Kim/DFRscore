@@ -111,14 +111,9 @@ class SVS(nn.Module):
         for atom in atoms:
             feature.append(get_atoms_feature(atom))
         feature = np.concatenate([np.array(feature), ring_feature],axis=1)  # 30 + 6 = 36
-        #feature = np.array(feature)
 
         padded_feature = np.zeros((self.max_num_atoms, self.len_features))
         padded_feature[:num_atoms,:self.len_features] = feature
-        #padded_feature[:num_atoms,:29] = feature[:num_atoms,:29]
-        #padded_feature[:num_atoms, -1] = feature[:num_atoms,-1]
-        #padded_feature[:num_atoms,29:35] = ring_feature
-
         padded_feature = torch.from_numpy(padded_feature)
         padded_adj = torch.from_numpy(padded_adj)
 

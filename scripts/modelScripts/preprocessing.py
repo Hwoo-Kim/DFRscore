@@ -3,7 +3,7 @@ from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from rdkit.Chem.rdmolops import GetFormalCharge
 from multiprocessing import Queue, Process,current_process
-#from scripts.utils import logger
+from scripts.utils import logger
 from sklearn.model_selection import train_test_split
 import numpy as np
 import queue
@@ -103,29 +103,33 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
     # for splitted smiles data with label
     smi_with_label = {'train':{}, 'val':{}, 'test':{}}
     for name in train_key_dicts:
-        label, smi = name.split('_')
+        label, _ = name.split('_')
         label = int(label)
+        with open(os.path.join(processed_data_dir,name), 'rb') as fr:
+            smi = pickle.load(fr)['smi']
         try:
             smi_with_label['train'][label].append(smi)
         except:
             smi_with_label['train'][label] = [smi]
     for name in val_key_dicts:
-        label, smi = name.split('_')
+        label, _ = name.split('_')
         label = int(label)
+        with open(os.path.join(processed_data_dir,name), 'rb') as fr:
+            smi = pickle.load(fr)['smi']
         try:
             smi_with_label['val'][label].append(smi)
         except:
             smi_with_label['val'][label] = [smi]
-        #val[smi] = label
     for name in test_key_dicts:
-        label, smi = name.split('_')
+        label, _ = name.split('_')
         label = int(label)
+        with open(os.path.join(processed_data_dir,name), 'rb') as fr:
+            smi = pickle.load(fr)['smi']
         try:
             smi_with_label['test'][label].append(smi)
         except:
             smi_with_label['test'][label] = [smi]
-        #test[smi] = label
-    with open(f'{preprocess_dir}/smi_with_label.pkl', 'wb') as fw:
+    with open(f'{preprocess_dir}/smi_split_result.pkl', 'wb') as fw:
         pickle.dump(smi_with_label, fw)
 
     return True
