@@ -1,5 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import MolFromSmiles as Mol
+from rdkit.Chem.rdchem import ChiralType
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from rdkit.Chem.rdmolops import GetFormalCharge
 from multiprocessing import Queue, Process,current_process
@@ -16,10 +17,10 @@ import time
 from datetime import datetime
 
 DATA_SPLIT_SEED = 1024
-random.seed(DATA_SPLIT_SEED)
 # 1. Data splitting functions
-# 1-1. For training data
 def processing_data(data_dir,max_step,logger,num_data):
+    global DATA_SPLIT_SEED
+    random.seed(DATA_SPLIT_SEED)
     # splitting
     smis_w_label = []
     for i in range(max_step+1):
@@ -59,28 +60,25 @@ def processing_data(data_dir,max_step,logger,num_data):
             raise Exception('Error in data preproessing.')
     else:
         logger('  Fine.')
-    global DATA_SPLIT_SEED
     logger(f'  Data were randomly chosen using random seed: {DATA_SPLIT_SEED}')
 
     labeled_data = []
     for idx, each_class in enumerate(smis_w_label):
         labeled_data += each_class[:class_sizes[idx]]
 
-    return labeled_data
+    return labeled_data, class_sizes
 
-def generate_keys(processed_data_dir, preprocess_dir, ratio):
+def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
     key_dir = os.path.join(preprocess_dir, 'data_keys')
     os.mkdir(key_dir)
     train_key_dicts, val_key_dicts, test_key_dicts = [], [],[]
-    data_names = os.listdir(processed_data_dir)
 
     all_data_dicts = {}
-    for name in data_names:
-        label = int(name.split('_')[0])
-        try:
-            all_data_dicts[label].append(name)
-        except:
-            all_data_dicts[label] = [name]
+    tmp=0
+    for label, size in enumerate(class_sizes):
+        names = [f'{label}_{tmp+idx}.pkl' for idx in range(size)]
+        all_data_dicts[label] = names
+        tmp += size
     ratio = np.array(ratio)
     ratio = ratio/np.sum(ratio)
     for k,v in all_data_dicts.items():
@@ -106,11 +104,10 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
         label, _ = name.split('_')
         label = int(label)
         with open(os.path.join(processed_data_dir,name), 'rb') as fr:
-            smi = pickle.load(fr)['smi']
-        try:
-            smi_with_label['train'][label].append(smi)
-        except:
-            smi_with_label['train'][label] = [smi]
+            try:
+                smi_with_label['train'][label].append(pickle.load(fr)['smi'])
+            except:
+                smi_with_label['train'][label] = [pickle.load(fr)['smi']]
     for name in val_key_dicts:
         label, _ = name.split('_')
         label = int(label)
@@ -134,6 +131,7 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
 
     return True
 
+"""
 # 1-2. For evalution model
 def label_data(data_dir,save_dir,each_class_size,max_step):
     results = []
@@ -170,6 +168,7 @@ def read_data(data_path):
         smis = fr.read().splitlines()
     print(f'Num data for inference: {len(smis)}')
     return smis
+"""
 
 # 2. Graph feature generating functions
 def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
@@ -243,21 +242,6 @@ def one_of_k_encoding(x,allowable_set):
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
 
-"""
-def get_ring_inform(sssr, atom):
-    ring_inform = [0]*6
-    if not atom.IsInRing():
-        return ring_inform
-    atom_index = atom.GetIdx()
-    for ring in sssr:
-        if (atom_index in ring) and len(ring)<8:
-            ring_inform[len(ring)-3]=1
-        elif (atom_index in ring) and len(ring)>=8:
-            ring_inform[5]=1
-
-    return ring_inform
-    """
-
 def sssr_to_ring_feature(sssr, num_atoms):
     ring_feature = np.zeros([num_atoms,6])
     for ring in sssr:
@@ -271,9 +255,10 @@ def get_atoms_feature(atom):
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    #one_of_k_encoding(int(atom.GetFormalCharge()),[-2,-1,0,1,2,'ELSE'])+
+                    #one_of_k_encoding(atom.GetChiralTag(), [ChiralType(0), ChiralType(1), ChiralType(2),'ELSE'])+
                     [atom.GetIsAromatic()])
                     # 11+6+6+6+1 = 30
+                    # 11+6+6+4+1 = 28
 
 # 3. Main functions
 def train_data_preprocess(args):
@@ -296,7 +281,7 @@ def train_data_preprocess(args):
 
     ratio = [8,1,1]         # train : val : test
     log()
-    labeled_data = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of 'smi\tlabel\n'
+    labeled_data, class_sizes = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of 'smi\tlabel\n'
     log('  Data preprocessing continued.')
 
     # 2. Get Feature Tensors
@@ -333,7 +318,7 @@ def train_data_preprocess(args):
 
     # 3. Split into train/val/test and generate keys
     log('  Generating keys...', end='')
-    generate_keys(save_dir, preprocess_dir,ratio)
+    generate_keys(save_dir, preprocess_dir, ratio, class_sizes)
     log('  Done.')
     log(f'  Elapsed time: {time.time()-since}\n')
     return preprocess_dir
@@ -380,4 +365,5 @@ def GAT_inference_data_generation(data_path, save_dir, inference_args):
 
     return working_dir
 """
+
 

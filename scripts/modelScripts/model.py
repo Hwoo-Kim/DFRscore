@@ -190,7 +190,6 @@ class SVS(nn.Module):
             A = batch['adj'].float().to(self.device)
             scores.append(self.forward(x,A).to('cpu').detach())
         probs = self.softmax(torch.cat(scores)).numpy()
-        #probs = np.round_(probs, decimals=4)
         if get_probs:
             retval = np.round_(probs, decimals=4)
         else:

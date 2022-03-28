@@ -24,27 +24,27 @@ def runExp01(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     if each_class_sizes is None:
         each_class_sizes = [None for i in range(max_step+1)]
     test_smi_list, true_smis, false_smis = [], [], []
+    with open(test_file_path, 'rb') as fr:
+        test_data=pickle.load(fr)['test']
     for i in range(max_step+1):
         if i ==0:
-            with open(os.path.join(test_file_path, f'neg{max_step}.smi'), 'r') as fr:
-                if each_class_sizes[i]:
-                    data = fr.read().splitlines()[:each_class_sizes[i]]
-                    each_class_sizes[i] = len(data)
-                else:
-                    data = fr.read().splitlines()
-                    each_class_sizes[i] = len(data)
-                #locals()[f'neg{max_step}'] = data
-                false_smis += data
+            if each_class_sizes[i]:
+                data = test_data[i][:each_class_sizes[i]]
+                each_class_sizes[i] = len(data)
+            else:
+                data = test_data[i]
+                each_class_sizes[i] = len(data)
+            #locals()[f'neg{max_step}'] = data
+            false_smis += data
         else:
-            with open(os.path.join(test_file_path, f'pos{i}.smi'), 'r') as fr:
-                if each_class_sizes[i]:
-                    data = fr.read().splitlines()[:each_class_sizes[i]]
-                    each_class_sizes[i] = len(data)
-                else:
-                    data = fr.read().splitlines()
-                    each_class_sizes[i] = len(data)
-                #locals()[f'pos{i}'] = data
-                true_smis += data
+            if each_class_sizes[i]:
+                data = test_data[i][:each_class_sizes[i]]
+                each_class_sizes[i] = len(data)
+            else:
+                data = test_data[i]
+                each_class_sizes[i] = len(data)
+            #locals()[f'pos{i}'] = data
+            true_smis += data
         test_smi_list += data
 
     # 1. result save path setting.
@@ -216,13 +216,13 @@ def runExp03(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     logger('\n----- BCC Evaluation -----')
     logger('  Calculating scores...')
     logger('  calculating SA score...', end='\t')
-    p = Pool(16)
-    SAScores = p.map_async(getSAScore, test_smi_list)
-    SAScores.wait()
-    p.close()
-    p.join()
-    SAScores=SAScores.get()
-    #SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
+    #p = Pool(16)
+    #SAScores = p.map_async(getSAScore, test_smi_list)
+    #SAScores.wait()
+    #p.close()
+    #p.join()
+    #SAScores=SAScores.get()
+    SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
     logger('  Done.')
     logger('  calculating SC score...', end='\t')
     SCScores = getSCScore(test_smi_list)
@@ -287,6 +287,7 @@ def runExp03(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     # 3. Setting for MCC test.
     logger('\n----- MCC Evaluation -----')
     pred_label_list = list(np.argmax(SVS_probs, axis=1).astype(int))
+    print(pred_label_list)
     MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
     mcc_acc, macro_avg_precision, macro_avg_f1_score = \
         MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_f1_score()
