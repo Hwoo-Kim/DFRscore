@@ -133,20 +133,24 @@ def runExp01(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     logger(f'  auroc = {scs_auroc}')
 
     # 3. Setting for MCC test.
+    true_label_list = []
+    for idx, l in enumerate(each_class_sizes):
+        true_label_list += [idx for i in range(l)]
+    true_label_list = np.array(true_label_list)
     logger('\n----- MCC Evaluation -----')
     pred_label_list = list(np.argmax(SVS_probs, axis=1).astype(int))
     MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
-    mcc_acc, macro_avg_precision, macro_avg_f1_score = \
-        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_f1_score()
-    logger('  mcc_acc, macro_avg_precision, macro_avg_f1_score = ')
-    logger(f'  {mcc_acc}, {macro_avg_precision}, {macro_avg_f1_score}')
+    mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
+        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
+    logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
+    logger(f'  {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
 
     result_dict = {
             'max_bin_acc': max_bin_acc, 'max_bin_prec': max_bin_prec, 'max_bin_critical_err': max_bin_critical_err,
             'acc_bin_acc': acc_bin_acc, 'acc_bin_prec': acc_bin_prec, 'acc_bin_critical_err': acc_bin_critical_err,
             'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err,
-            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_f1_score': macro_avg_f1_score,
-            'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
+            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_recall': macro_avg_recall,
+            'macro_avg_f1_score': macro_avg_f1_score, 'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
             }
 
     first_row, second_row = [], []
@@ -287,7 +291,6 @@ def runExp03(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     # 3. Setting for MCC test.
     logger('\n----- MCC Evaluation -----')
     pred_label_list = list(np.argmax(SVS_probs, axis=1).astype(int))
-    print(pred_label_list)
     MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
     mcc_acc, macro_avg_precision, macro_avg_f1_score = \
         MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_f1_score()

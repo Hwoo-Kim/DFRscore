@@ -12,12 +12,14 @@ save_dir = os.path.abspath(dirname(__file__))
 result_log_name = os.path.join(save_dir, 'model_eval_result.txt')
 log = logger(os.path.join(save_dir, result_log_name))
 max_step=4
-test_file_path = '/home/hwkim/SVS/save/PubChem4M/retro_result/totdegree_seed1024/smi_split_result.pkl'
-each_class_sizes = [2000, 2000, 2000, 2000, 2000]
-#each_class_sizes = [20, 20, 20, 20, 20]
+#test_file_path = '/home/hwkim/SVS/save/PubChem4M/retro_result/totdegree_seed1024/smi_split_result.pkl'
+test_file_path = '/Users/hwkim/works/SVS/Experiments/exp1/smi_split_result.pkl'
+#each_class_sizes = [2000, 2000, 2000, 2000, 2000]
+each_class_sizes = [20, 20, 20, 20, 20]
 
 # 2. model load
-model_path = '/home/hwkim/SVS/save/PubChem4M/SVS_nConv6_lr0_0004_conv256_fc128_8HEADS/GAT_best_model_174.pt'
+#model_path = '/home/hwkim/SVS/save/PubChem4M/SVS_nConv6_lr0_0004_conv256_fc128_8HEADS/GAT_best_model_174.pt'
+model_path = '/Users/hwkim/works/SVS/Experiments/exp1/GAT_model_220.pt'
 predictor = SVS(
             conv_dim=256,
             fc_dim=128,
@@ -29,7 +31,7 @@ predictor = SVS(
             num_class=max_step+1
             )
 predictor.restore(model_path)
-predictor = predictor.cuda()
+#predictor = predictor.cuda()
 
 # 3. Get Evaluation Metrics
 log('----- Input Config Information -----')
