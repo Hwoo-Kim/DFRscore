@@ -3,7 +3,7 @@ from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from rdkit.Chem.rdmolops import GetFormalCharge
 from multiprocessing import Queue, Process,current_process
-from scripts.utils import logger
+#from scripts.utils import logger
 from sklearn.model_selection import train_test_split
 import numpy as np
 import queue
@@ -105,16 +105,25 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio):
     for name in train_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        smi_with_label['train'][smi] = label
+        try:
+            smi_with_label['train'][label].append(smi)
+        except:
+            smi_with_label['train'][label] = [smi]
     for name in val_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        smi_with_label['val'][smi] = label
+        try:
+            smi_with_label['val'][label].append(smi)
+        except:
+            smi_with_label['val'][label] = [smi]
         #val[smi] = label
     for name in test_key_dicts:
         label, smi = name.split('_')
         label = int(label)
-        smi_with_label['test'][smi] = label
+        try:
+            smi_with_label['test'][label].append(smi)
+        except:
+            smi_with_label['test'][label] = [smi]
         #test[smi] = label
     with open(f'{preprocess_dir}/smi_with_label.pkl', 'wb') as fw:
         pickle.dump(smi_with_label, fw)
@@ -200,9 +209,11 @@ def get_graph_feature(data_list,
         padded_adj[:num_atoms,:num_atoms] = adj
         feature = []
         atoms = mol.GetAtoms()
+        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
         for atom in atoms:
-            feature.append(get_atoms_feature(sssr, atom))
-        feature = np.array(feature)
+            feature.append(get_atoms_feature(atom))
+        feature = np.concatenate([np.array(feature), ring_feature],axis=1)
+
         padded_feature = np.zeros((max_num_atoms, len_features))
         padded_feature[:num_atoms,:len_features] = feature
         padded_feature = torch.from_numpy(padded_feature)
@@ -228,6 +239,7 @@ def one_of_k_encoding(x,allowable_set):
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
 
+"""
 def get_ring_inform(sssr, atom):
     ring_inform = [0]*6
     if not atom.IsInRing():
@@ -240,16 +252,24 @@ def get_ring_inform(sssr, atom):
             ring_inform[5]=1
 
     return ring_inform
+    """
 
-def get_atoms_feature(sssr, atom):
+def sssr_to_ring_feature(sssr, num_atoms):
+    ring_feature = np.zeros([num_atoms,6])
+    for ring in sssr:
+        r_size = min(len(ring)-3,5)
+        for idx in list(ring):
+            ring_feature[idx][r_size] = 1
+    return ring_feature
+
+def get_atoms_feature(atom):
     return np.array(one_of_k_encoding(str(atom.GetSymbol()),['C','N','O','F','S','Cl','Br','I','B','P','ELSE'])+
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
                     #one_of_k_encoding(int(atom.GetFormalCharge()),[-2,-1,0,1,2,'ELSE'])+
-                    get_ring_inform(sssr,atom)+
                     [atom.GetIsAromatic()])
-                    # 11+6+6+6+6+1 = 36
+                    # 11+6+6+6+1 = 30
 
 # 3. Main functions
 def train_data_preprocess(args):
@@ -356,3 +376,4 @@ def GAT_inference_data_generation(data_path, save_dir, inference_args):
 
     return working_dir
 """
+

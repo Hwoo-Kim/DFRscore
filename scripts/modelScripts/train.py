@@ -184,8 +184,8 @@ def train_SVS(args):
 
     # 4. Test phase
     predictor.eval()
-    test_loss_list += test(predictor,loss_fn,test_data_loader)
+    test_loss_list = test(predictor,loss_fn,test_data_loader)
     test_loss= np.mean(test_loss_list)
     # Logging
     log()
-    log(f'  ----- Test result -----','  test loss: {test_loss}')
+    log(f'  ----- Test result -----',f'  test loss: {test_loss}')

@@ -7,10 +7,11 @@ import os.path as op
 import numpy as np
 
 # 0. Common functions
-def rescale_score(score_list:list, m, M, inverse=None) -> list:
+def rescale_score(score_list:list, m, M, reverse=None) -> list:
+    "Rescale the given score_list into [0,1]"
     scores = np.array(score_list, dtype='float')
     rescaled_score = (scores-m)/(M-m)
-    if inverse:
+    if reverse:
         rescaled_score = rescaled_score*(-1)+1
     return rescaled_score
 
@@ -97,19 +98,17 @@ def calculateSAScore(m):
 
     return sascore
 
-def getSAScore(smis:list):
+def getSAScore(smi:str):
     '''
     Original SA score scale is [1,10]. Larger the score is, harder synthesis of corresponding molecule is.
     Rescaled score scale is [0,1]. Larger the score is, easier synthesis of corresponding molecule is.
     '''
     m, M = 1.0, 10.0
-    raw_scores = []
-    for smi in smis:
-        mol = Chem.MolFromSmiles(smi)
-        raw_scores.append(calculateSAScore(mol))
-    rescaled_score = rescale_score(raw_scores, m=m, M=M, inverse=True)    # rescaled into [0,1]
+    mol = Chem.MolFromSmiles(smi)
+    score = calculateSAScore(mol)
+    rescaled_score = (score-m)/(M-m)
+    rescaled_score = rescaled_score*(-1)+1
     return rescaled_score
-
 
 # 2. SC Score
 def getSCScore(smis:list):
@@ -137,7 +136,7 @@ def getSCScore(smis:list):
     for smi in smis:
         (smi, raw_score) = model.get_score_from_smi(smi)
         raw_scores.append(raw_score)
-    rescaled_score = rescale_score(raw_scores, m=m, M=M, inverse=True)    # rescaled into [0,1]
+    rescaled_score = rescale_score(raw_scores, m=m, M=M, reverse=True)    # rescaled into [0,1]
     return rescaled_score
 
 if __name__=='__main__':
