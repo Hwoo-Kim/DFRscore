@@ -93,3 +93,10 @@ class UnbalMultiConfusionMatrix(ConfMatrix):        # for EXP01, EXP03. MCCs.
 def get_AUROC(y_true, y_score):
     return round(roc_auc_score(y_true, y_score),3)
 
+if __name__=='__main__':
+    true_list = np.concatenate([np.zeros(3), np.ones(5), np.ones(6)*2])
+    pred_list = np.concatenate([np.zeros(4), np.ones(3), np.ones(7)*2])
+    conf_matrix = UnbalMultiConfusionMatrix(true_list, pred_list, numb_classes=3)
+    mcc_acc, macro_avg_precision, macro_avg_f1_score = \
+        conf_matrix.get_accuracy(), conf_matrix.get_macro_avg_precision(), conf_matrix.get_macro_avg_f1_score()
+    print(mcc_acc, macro_avg_precision, macro_avg_f1_score)
