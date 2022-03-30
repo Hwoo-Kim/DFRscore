@@ -24,6 +24,165 @@ def runExp01(predictor, max_step, save_dir, test_file_path, logger, each_class_s
     if each_class_sizes is None:
         each_class_sizes = [None for i in range(max_step+1)]
     test_smi_list, true_smis, false_smis = [], [], []
+    if test_file_path[-4:] == '.pkl':
+        with open(test_file_path, 'rb') as fr:
+            test_data=pickle.load(fr)['test']
+    else:
+        test_data = dict()
+        for i in range(max_step+1):
+            if i == 0:
+                with open(os.path.join(test_file_path, f'neg{max_step}.smi'), 'r') as fr:
+                    test_data[0] = fr.read().splitlines()
+            else:
+                with open(os.path.join(test_file_path, f'pos{i}.smi'), 'r') as fr:
+                    test_data[i] = fr.read().splitlines()
+
+    for i in range(max_step+1):
+        if each_class_sizes[i]:
+            data = test_data[i][:each_class_sizes[i]]
+            each_class_sizes[i] = len(data)
+        else:
+            data = test_data[i]
+            each_class_sizes[i] = len(data)
+        test_smi_list += data
+
+    # 1. result save path setting.
+    csv_file = os.path.join(save_dir, 'eval_metrics.csv')
+    mcc_array_file= os.path.join(save_dir, 'mcc_confusion_matrix.txt')
+    bin_array_file = os.path.join(save_dir, 'max_bin_confusion_matrix.txt')
+
+    # 2. BCC! - comparison with SA and SC
+    for step in range(max_step+1):
+        if step == 0:
+            logger(f'  Neg: {each_class_sizes[step]}')
+        else:
+            logger(f'  Pos{step}: {each_class_sizes[step]}')
+
+    # 2-1. get scores SA score, SC score, and SVS
+    # SA score and SC score were already rescaled into [0, 1].
+    logger('\n  Calculating scores...')
+    logger('  calculating SA score...', end='\t')
+    #p = Pool(16)
+    #SAScores = p.map_async(getSAScore, test_smi_list)
+    #SAScores.wait()
+    #p.close()
+    #p.join()
+    #SAScores=SAScores.get()
+    SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
+    logger('  Done.')
+    logger('  calculating SC score...', end='\t')
+    SCScores = getSCScore(test_smi_list)
+    logger('  Done.')
+    logger('  calculating SVS...', end='\t')
+    SVSs = predictor.smiListToScores(test_smi_list)
+    SVS_probs = predictor.smiListToScores(test_smi_list, get_probs=True)
+    logger('  Done.')
+
+    # 2-2. Setting for BCC test.
+    true_label_list = []
+    for idx, l in enumerate(each_class_sizes):
+        if idx ==0:
+            true_label_list += [0 for i in range(l)]
+        else:
+            true_label_list += [1 for i in range(l)]
+    true_label_list = np.array(true_label_list)
+
+    # 2-2-1. Extract Max Probability from raw probability result.
+    pred_label_list1 = list((np.argmax(SVS_probs, axis=1)!=0).astype(int))
+
+    # 2-2-2. Extract Accumulated Probability from raw probability result.
+    pred_label_list2 = list((SVS_probs[:,0]<0.5).astype(int))
+
+    # 2-2-3. Using rescaled score from SVSs
+    pred_label_list3 = list((rescale_score(SVSs, m=1, M=max_step+1, reverse=True)>0.5).astype(int))
+
+    # 2-3. Confusion matrix and evaluate metrics
+    logger('\n----- BCC Evaluation -----')
+    Max_bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list1, neg_label = 0)
+    Acc_bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list2, neg_label = 0)
+    Scalar_bin = BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list3, neg_label = 0)
+    logger('1. Max Probability')
+    max_bin_acc, max_bin_prec, max_bin_critical_err = \
+            Max_bin_conf_matrix.get_accuracy(), Max_bin_conf_matrix.get_precision(), Max_bin_conf_matrix.get_critical_error()
+    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
+    logger(f'  {max_bin_acc}, {max_bin_prec}, {max_bin_critical_err}', end=', ')
+    logger(get_AUROC(true_label_list, pred_label_list1))
+
+    logger('2. Accumulated Probability')
+    acc_bin_acc, acc_bin_prec, acc_bin_critical_err = \
+            Acc_bin_conf_matrix.get_accuracy(), Acc_bin_conf_matrix.get_precision(), Acc_bin_conf_matrix.get_critical_error()
+    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
+    logger(f'  {acc_bin_acc}, {acc_bin_prec}, {acc_bin_critical_err}', end=', ')
+    logger(get_AUROC(true_label_list, pred_label_list2))
+
+    logger('3. Scalar score')
+    scalar_bin_acc, scalar_bin_prec, scalar_bin_critical_err = \
+            Scalar_bin.get_accuracy(), Scalar_bin.get_precision(), Scalar_bin.get_critical_error()
+    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
+    logger(f'  {scalar_bin_acc}, {scalar_bin_prec}, {scalar_bin_critical_err}', end=', ' )
+    logger(get_AUROC(true_label_list, pred_label_list3))
+
+    # 2-4. SA score and SC score
+    logger('4. SA score')
+    sas_auroc = get_AUROC(true_label_list, SAScores)
+    logger(f'  auroc = {sas_auroc}')
+
+    logger('5. SC score')
+    scs_auroc = get_AUROC(true_label_list, SCScores)
+    logger(f'  auroc = {scs_auroc}')
+
+    # 3. Setting for MCC test.
+    true_label_list = []
+    for idx, l in enumerate(each_class_sizes):
+        true_label_list += [idx for i in range(l)]
+    true_label_list = np.array(true_label_list)
+    logger('\n----- MCC Evaluation -----')
+    pred_label_list = list(np.argmax(SVS_probs, axis=1).astype(int))
+    MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
+    mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
+        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
+    logger('mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
+    logger(f'{mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
+
+    bin_result_dict = {
+            'max_bin_acc': max_bin_acc, 'max_bin_prec': max_bin_prec, 'max_bin_critical_err': max_bin_critical_err,
+            'acc_bin_acc': acc_bin_acc, 'acc_bin_prec': acc_bin_prec, 'acc_bin_critical_err': acc_bin_critical_err,
+            'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err,
+            'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
+            }
+    mcc_result_dict = {
+            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_recall': macro_avg_recall,
+            'macro_avg_f1_score': macro_avg_f1_score, 
+            }
+
+    first_row, second_row = [], []
+    with open(csv_file, 'w', newline='') as fw:
+        wr=csv.writer(fw)
+        wr.writerow(bin_result_dict.keys())
+        wr.writerow(bin_result_dict.values())
+        wr.writerow([])
+        wr.writerow(mcc_result_dict.keys())
+        wr.writerow(mcc_result_dict.values())
+    np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
+    np.savetxt(bin_array_file, Max_bin_conf_matrix.conf_matrix, fmt='%.0f')
+
+    return True
+
+#TODO: runExp03 구현!
+def runExp03(predictor, max_step, save_dir, test_file_path, logger, each_class_sizes=None):
+    '''
+    Arguments:
+      predictor: SVS object already restored by trained model.
+      num_class: the number of classes. equals to max_step+1.
+      test_smi_list: list of list. [neg, pos1, pos2, ...]
+        length = num_class
+        Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
+      save_dir: the directory where evaluation result will be saved.
+    '''
+    # 0. reading test files
+    if each_class_sizes is None:
+        each_class_sizes = [None for i in range(max_step+1)]
+    test_smi_list, true_smis, false_smis = [], [], []
     with open(test_file_path, 'rb') as fr:
         test_data=pickle.load(fr)['test']
     for i in range(max_step+1):
@@ -166,157 +325,6 @@ def runExp01(predictor, max_step, save_dir, test_file_path, logger, each_class_s
 
     return True
 
-def runExp03(predictor, max_step, save_dir, test_file_path, logger, each_class_sizes=None):
-    '''
-    Arguments:
-      predictor: SVS object already restored by trained model.
-      num_class: the number of classes. equals to max_step+1.
-      test_smi_list: list of list. [neg, pos1, pos2, ...]
-        length = num_class
-        Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
-      save_dir: the directory where evaluation result will be saved.
-    '''
-    # 0. reading test files
-    if each_class_sizes is None:
-        each_class_sizes = [None for i in range(max_step+1)]
-    test_smi_list, true_smis, false_smis = [], [], []
-    for i in range(max_step+1):
-        if i ==0:
-            with open(os.path.join(test_file_path, f'neg{max_step}.smi'), 'r') as fr:
-                if each_class_sizes[i]:
-                    data = fr.read().splitlines()[:each_class_sizes[i]]
-                    each_class_sizes[i] = len(data)
-                else:
-                    data = fr.read().splitlines()
-                    each_class_sizes[i] = len(data)
-                #locals()[f'neg{max_step}'] = data
-                false_smis += data
-        else:
-            with open(os.path.join(test_file_path, f'pos{i}.smi'), 'r') as fr:
-                if each_class_sizes[i]:
-                    data = fr.read().splitlines()[:each_class_sizes[i]]
-                    each_class_sizes[i] = len(data)
-                else:
-                    data = fr.read().splitlines()
-                    each_class_sizes[i] = len(data)
-                #locals()[f'pos{i}'] = data
-                true_smis += data
-        test_smi_list += data
-
-    # 1. result save path setting.
-    csv_file = os.path.join(save_dir, 'eval_metrics.csv')
-    mcc_array_file= os.path.join(save_dir, 'mcc_confusion_matrix.txt')
-    bin_array_file = os.path.join(save_dir, 'max_bin_confusion_matrix.txt')
-
-    # 2. BCC! - comparison with SA and SC
-    for step in range(max_step+1):
-        if step == 0:
-            logger(f'  Neg: {each_class_sizes[step]}')
-        else:
-            logger(f'  Pos{step}: {each_class_sizes[step]}')
-
-    # 2-1. get scores SA score, SC score, and SVS
-    # SA score and SC score were already rescaled into [0, 1].
-    logger('\n----- BCC Evaluation -----')
-    logger('  Calculating scores...')
-    logger('  calculating SA score...', end='\t')
-    #p = Pool(16)
-    #SAScores = p.map_async(getSAScore, test_smi_list)
-    #SAScores.wait()
-    #p.close()
-    #p.join()
-    #SAScores=SAScores.get()
-    SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
-    logger('  Done.')
-    logger('  calculating SC score...', end='\t')
-    SCScores = getSCScore(test_smi_list)
-    logger('  Done.')
-    logger('  calculating SVS...', end='\t')
-    SVSs = predictor.smiListToScores(test_smi_list)
-    SVS_probs = predictor.smiListToScores(test_smi_list, get_probs=True)
-    logger('  Done.')
-
-    # 2-2. Setting for BCC test.
-    true_label_list = []
-    for idx, l in enumerate(each_class_sizes):
-        if idx ==0:
-            true_label_list += [0 for i in range(l)]
-        else:
-            true_label_list += [1 for i in range(l)]
-    true_label_list = np.array(true_label_list)
-
-    # 2-2-1. Extract Max Probability from raw probability result.
-    pred_label_list1 = list((np.argmax(SVS_probs, axis=1)!=0).astype(int))
-
-    # 2-2-2. Extract Accumulated Probability from raw probability result.
-    pred_label_list2 = list((SVS_probs[:,0]<0.5).astype(int))
-
-    # 2-2-3. Using rescaled score from SVSs
-    pred_label_list3 = list((rescale_score(SVSs, m=1, M=max_step+1, reverse=True)>0.5).astype(int))
-
-    # 2-3. Confusion matrix and evaluate metrics
-    Max_bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list1, neg_label = 0)
-    Acc_bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list2, neg_label = 0)
-    Scalar_bin = BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list3, neg_label = 0)
-    logger('1. Max Probability')
-    max_bin_acc, max_bin_prec, max_bin_critical_err = \
-            Max_bin_conf_matrix.get_accuracy(), Max_bin_conf_matrix.get_precision(), Max_bin_conf_matrix.get_critical_error()
-    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-    logger(f'  {max_bin_acc}, {max_bin_prec}, {max_bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, pred_label_list1))
-
-    logger('2. Accumulated Probability')
-    acc_bin_acc, acc_bin_prec, acc_bin_critical_err = \
-            Acc_bin_conf_matrix.get_accuracy(), Acc_bin_conf_matrix.get_precision(), Acc_bin_conf_matrix.get_critical_error()
-    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-    logger(f'  {acc_bin_acc}, {acc_bin_prec}, {acc_bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, pred_label_list2))
-
-    logger('3. Scalar score')
-    scalar_bin_acc, scalar_bin_prec, scalar_bin_critical_err = \
-            Scalar_bin.get_accuracy(), Scalar_bin.get_precision(), Scalar_bin.get_critical_error()
-    logger('  Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-    logger(f'  {scalar_bin_acc}, {scalar_bin_prec}, {scalar_bin_critical_err}', end=', ' )
-    logger(get_AUROC(true_label_list, pred_label_list3))
-
-    # 2-4. SA score and SC score
-    logger('4. SA score')
-    sas_auroc = get_AUROC(true_label_list, SAScores)
-    logger(f'  auroc = {sas_auroc}')
-
-    logger('5. SC score')
-    scs_auroc = get_AUROC(true_label_list, SCScores)
-    logger(f'  auroc = {scs_auroc}')
-
-    # 3. Setting for MCC test.
-    logger('\n----- MCC Evaluation -----')
-    pred_label_list = list(np.argmax(SVS_probs, axis=1).astype(int))
-    MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
-    mcc_acc, macro_avg_precision, macro_avg_f1_score = \
-        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_f1_score()
-    logger('  mcc_acc, macro_avg_precision, macro_avg_f1_score = ')
-    logger(f'  {mcc_acc}, {macro_avg_precision}, {macro_avg_f1_score}')
-
-    result_dict = {
-            'max_bin_acc': max_bin_acc, 'max_bin_prec': max_bin_prec, 'max_bin_critical_err': max_bin_critical_err,
-            'acc_bin_acc': acc_bin_acc, 'acc_bin_prec': acc_bin_prec, 'acc_bin_critical_err': acc_bin_critical_err,
-            'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err,
-            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_f1_score': macro_avg_f1_score,
-            'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
-            }
-
-    first_row, second_row = [], []
-    for key, val in result_dict.items():
-        first_row.append(key)
-        second_row.append(val)
-    with open(csv_file, 'w', newline='') as fw:
-        wr=csv.writer(fw)
-        wr.writerow(first_row)
-        wr.writerow(second_row)
-    np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
-    np.savetxt(bin_array_file, Max_bin_conf_matrix.conf_matrix, fmt='%.0f')
-
-    return True
 
     if exp == 'EXP03':
         # 2-2. EXP03
