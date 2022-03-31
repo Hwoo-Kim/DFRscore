@@ -18,14 +18,21 @@ import copy
 import argparse
 from datetime import datetime
 
+ZERO=None
+NEG_MIN=None
+
+def HingeMSELoss(y_pred, y_true):
+    y_true = y_true.float()
+    y_pred = y_pred.squeeze(-1)
+    return  torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
+
 def train(model,loss_fn,optimizer,train_data_loader):
     train_loss_list = []
     for i_batch,batch in enumerate(train_data_loader):
         x = batch['feature'].float().cuda()
         A = batch['adj'].float().cuda()
-        y = batch['label'].long().cuda()
+        y = batch['label'].cuda()             # label is in int type
         y_pred = model(x,A) 
-        #loss = loss_fn(y_pred,y)-lamb*torch.mean(torch.log(F.softmax(y_pred,dim=1)))
         loss = loss_fn(y_pred,y)
         optimizer.zero_grad()
         loss.backward()
@@ -38,9 +45,8 @@ def validate(model,loss_fn,val_data_loader):
     for i_batch,batch in enumerate(val_data_loader):
         x = batch['feature'].float().cuda()
         A = batch['adj'].float().cuda()
-        y = batch['label'].long().cuda()
-        y_pred = model(x,A) 
-        #loss = loss_fn(y_pred,y)-lamb*torch.mean(torch.log(F.softmax(y_pred,dim=1)))
+        y = batch['label'].cuda()
+        y_pred = model(x,A)
         loss = loss_fn(y_pred,y)
         val_loss_list.append(loss.data.cpu().numpy())
     return val_loss_list
@@ -50,9 +56,8 @@ def test(model,loss_fn,test_data_loader):
     for i_batch,batch in enumerate(test_data_loader):
         x = batch['feature'].float().cuda()
         A = batch['adj'].float().cuda()
-        y = batch['label'].long().cuda()
+        y = batch['label'].cuda()
         y_pred = model(x,A) 
-        #loss = loss_fn(y_pred,y)-lamb*torch.mean(torch.log(F.softmax(y_pred,dim=1)))
         loss = loss_fn(y_pred,y)
         test_loss_list.append(loss.data.cpu().numpy())
     return test_loss_list
@@ -82,9 +87,14 @@ def train_SVS(args):
     since = time.time()
     # 1. Set training parameters
     torch.set_num_threads(int(args.num_threads))
-    os.environ['CUDA_VISIBLE_DEVICES'] = utils.get_cuda_visible_devices(1)
 
-    loss_fn = nn.CrossEntropyLoss(reduction='mean')
+    assert args.problem in ['regression', 'classification'], \
+            "args.problem must be one between ['regression', 'classification']"
+    if args.problem == 'regression':
+        loss_fn = HingeMSELoss
+        args.max_step = 0
+    else:
+        loss_fn = nn.CrossEntropyLoss(reduction='mean')
     predictor = SVS(
             conv_dim=args.conv_dim,
             fc_dim=args.fc_dim,
@@ -93,7 +103,8 @@ def train_SVS(args):
             num_heads=args.num_heads,
             len_features=args.len_features,
             max_num_atoms=args.max_num_atoms,
-            num_class=args.max_step+1,
+            out_dim=args.max_step+1,
+            problem=args.problem,
             dropout=args.dropout)
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -105,6 +116,10 @@ def train_SVS(args):
                     )
     lr = args.lr
     predictor.cuda()
+    global ZERO, NEG_MIN
+    ZERO = torch.tensor(0).float().to(predictor.device)
+    NEG_MIN = torch.tensor(args.max_step+1).float().to(predictor.device)
+
     log('  ----- Train Config Information -----')
     #log(f' data dir: {data_dir}')
     log(f'  save_dir: {save_dir}')
@@ -130,7 +145,6 @@ def train_SVS(args):
                     batch_size=args.batch_size,
                     shuffle = False
                     )
-
 
     train_loss_history = []
     val_loss_history = []
@@ -189,3 +203,17 @@ def train_SVS(args):
     # Logging
     log()
     log(f'  ----- Test result -----',f'  test loss: {test_loss}')
+
+if __name__=='__main__':
+    ZERO = torch.tensor(0).float()
+    NEG_MIN = torch.tensor(5)
+    y_true= torch.cat([torch.ones(5),torch.ones(5)*2,torch.ones(5)*3,torch.ones(5)*4,torch.ones(5)*5])
+    y_pred= (torch.cat([torch.arange(5),torch.arange(5),torch.arange(5),torch.arange(5),torch.arange(5)])+1).float()
+    print('y_true:', y_true)
+    print('y_pred:', y_pred)
+    print(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
+    print(torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2)))
+    y_pred= (torch.ones(25)*6).float()
+    print('y_pred:', y_pred)
+    print(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
+    print(torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2)))

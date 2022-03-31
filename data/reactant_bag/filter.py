@@ -16,27 +16,28 @@ RDLogger.DisableLog('rdApp.*')
 import random, time
 
 def MolWt(mol):
-    return ExactMolWt(mol) < 600
+    return ExactMolWt(mol) < 250
 
-def Stereo(mol):
-    return GetStereoisomerCount(mol) == 1       # only molecules all the stereo configuraion are specified.
 
-def NoStar(s):
-    return s.count('*') == 0
+#def Stereo(mol):
+    #return GetStereoisomerCount(mol) == 1       # only molecules all the stereo configuraion are specified.
 
-def OneMol(s):
-    return s.count('.') == 0
+#def NoStar(s):
+    #return s.count('*') == 0
 
-def Sanitize(mol):
-    return int(Chem.SanitizeMol(mol, catchErrors=True))==0
+#def OneMol(s):
+    #return s.count('.') == 0
 
-def OrganicSubset(mol):
-    organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
-    atoms = mol.GetAtoms()
-    for a in atoms:
-        if not a.GetSymbol() in organic_subset:
-            return False
-    return True
+#def Sanitize(mol):
+    #return int(Chem.SanitizeMol(mol, catchErrors=True))==0
+
+#def OrganicSubset(mol):
+#    organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
+#    atoms = mol.GetAtoms()
+#    for a in atoms:
+#        if not a.GetSymbol() in organic_subset:
+#            return False
+#    return True
 
 def do_job(tasks):
     while True:

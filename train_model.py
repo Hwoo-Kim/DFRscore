@@ -2,9 +2,9 @@ import argparse
 import os
 from scripts.modelScripts.preprocessing import train_data_preprocess
 from scripts.modelScripts.train import train_SVS
-from scripts.utils import logger
-from scripts.utils import train_save_dir_setting
+from scripts.utils import logger, train_save_dir_setting, get_cuda_visible_devices
 from datetime import datetime
+os.environ['CUDA_VISIBLE_DEVICES'] = get_cuda_visible_devices(1)
 
 def main_train(args):
     # 0. Reading config and directory setting
@@ -24,9 +24,10 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type = str, help = 'path to retro analysis result directory')
     parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
-    parser.add_argument("--data_preprocessing", type = str, default='training_data', help = "name of preprocessed data.")       #TODO: move this part below
     parser.add_argument('--num_data', type = int, help = 'number of data used in train/val/test.')
+    parser.add_argument('--problem', type = str, help = "type of problem. must be one of between 'regression' and 'classification'")
     # Default setting
+    parser.add_argument("--data_preprocessing", type = str, default='processed_data', help = "name of preprocessed data.")
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
     parser.add_argument('--max_step',type=int, default=4, help='the maximum number of reaction steps')
     parser.add_argument('--max_num_atoms', type = int, default=64, help = 'maximum number of atoms')

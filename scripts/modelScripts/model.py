@@ -22,7 +22,7 @@ from scripts.modelScripts.data import InferenceDataset
 #NUM_GAT_LAYER = 6
 #NUM_FC_LAYER = 4
 #NUM_HEADS= 8
-#NUM_CLASS= 5
+#OUT_DIM= 5
 #LEN_FEATURES = 36
 
 class SVS(nn.Module):
@@ -46,10 +46,12 @@ class SVS(nn.Module):
             num_heads,
             len_features,
             max_num_atoms,
-            num_class,
+            problem='regression',
+            out_dim=1,
             dropout:float=0
             ):
         super().__init__()
+        assert problem in ['regression', 'classification']
         self.conv_dim = conv_dim
         self.fc_dim = fc_dim
         self.n_GAT_layer = n_GAT_layer
@@ -57,7 +59,9 @@ class SVS(nn.Module):
         self.num_heads = num_heads
         self.len_features = len_features
         self.max_num_atoms = max_num_atoms
-        self.num_class = num_class
+        self.problem = problem
+        self.out_dim = out_dim 
+        self.dropout = nn.Dropout(dropout)
 
         self.embedding = nn.Linear(len_features,conv_dim)
         self.GAT_layers=nn.ModuleList(
@@ -72,11 +76,14 @@ class SVS(nn.Module):
         self.fc_layers=nn.ModuleList([nn.Linear(conv_dim,fc_dim)])
         for i in range(n_fc_layer-2):
             self.fc_layers.append(nn.Linear(fc_dim,fc_dim))
-        self.pred_layer = nn.Linear(fc_dim,num_class)
+        if self.problem=='regression':
+            self.out_dim = 1
+        self.pred_layer = nn.Linear(fc_dim, self.out_dim)
         self.relu = nn.ReLU()
+        self.elu = nn.ELU()
         self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(dropout)
         self.path_to_model = 'Not restored'
+        self.device = torch.device('cpu')
 
     def forward(self,x,A):
         x = self.embedding(x)
@@ -89,6 +96,8 @@ class SVS(nn.Module):
             x = self.relu(x)
             x = self.dropout(x)
         retval = self.pred_layer(x)
+        #if self.problem=='regression':
+            #retval = self.elu(retval)+1
         return retval
 
     def restore(self, path_to_model):
@@ -154,19 +163,24 @@ class SVS(nn.Module):
     def molToScore(self, mol:object, get_probs=False):
         assert isinstance(mol, rdkit.Chem.rdchem.Mol), \
             'input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol.'
+        assert not (self.problem=='regression' and get_probs), \
+            'Cannot get probabilites for Regression problem.'
         self.device = self.embedding.weight.device
         feature, adj = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
         adj= adj.float().unsqueeze(0).to(self.device)
-        probs = self.softmax(self.forward(feature, adj)).to('cpu').detach().numpy()[0]
-        if get_probs:
-            retval = np.round_(probs, decimals=4)
+        if self.problem == 'regression':
+            return self.forward(feature, adj).to('cpu').detach().numpy()[0]
         else:
-            labels = np.array(range(self.num_class))
-            labels[0] = self.num_class
-            retval = np.sum(np.multiply(probs, labels),axis=0)
-            retval = np.round_(retval, decimals=4)
-        return retval
+            probs = self.softmax(self.forward(feature, adj)).to('cpu').detach().numpy()[0]
+            if get_probs:
+                retval = np.round_(probs, decimals=4)
+            else:
+                labels = np.array(range(self.out_dim))
+                labels[0] = self.out_dim
+                retval = np.sum(np.multiply(probs, labels),axis=0)
+                retval = np.round_(retval, decimals=4)
+            return retval
 
     def smiListToScores(self, smi_list, batch_size=256, get_probs=False):
         mol_list = []
@@ -179,6 +193,8 @@ class SVS(nn.Module):
 
     def molListToScores(self, mol_list, batch_size=256, get_probs=False):
         # TODO: 너무 크다 싶으면 10000개 씩 잘라서 하는 등 활용 가능.
+        assert not (self.problem=='regression' and get_probs), \
+            'Cannot get probabilites for Regression problem.'
         self.device = self.embedding.weight.device
         padded_features, padded_adjs = self.mols_to_graph_feature(mol_list)
         data_set = InferenceDataset(features=padded_features, adjs=padded_adjs)
@@ -189,17 +205,28 @@ class SVS(nn.Module):
             x = batch['feature'].float().to(self.device)
             A = batch['adj'].float().to(self.device)
             scores.append(self.forward(x,A).to('cpu').detach())
-        probs = self.softmax(torch.cat(scores)).numpy()
-        if get_probs:
-            retval = np.round_(probs, decimals=4)
+        if self.problem == 'regression':
+            return torch.concat(scores).squeeze(-1).numpy()
         else:
-            labels = np.array(range(self.num_class))
-            labels[0] = self.num_class
-            retval = np.sum(np.multiply(probs, labels),axis=1)
-            #retval = np.sum(np.multiply(probs, np.array(range(self.num_class))),axis=1)
-            retval = np.round_(retval, decimals=4)
-        return retval
-        #return scores
+            probs = self.softmax(torch.cat(scores)).numpy()
+            if get_probs:
+                retval = np.round_(probs, decimals=4)
+            else:
+                labels = np.array(range(self.out_dim))
+                labels[0] = self.out_dim
+                retval = np.sum(np.multiply(probs, labels),axis=1)
+                retval = np.round_(retval, decimals=4)
+            return retval
+
+    def cuda(self):
+        _SVS = super().cuda()
+        self.device = _SVS.embedding.weight.device
+        return _SVS
+
+    def to(self, torch_device):
+        _SVS = super().to(torch_device)
+        self.device = _SVS.embedding.weight.device
+        return _SVS
 
     def _cuda_is_available(self):
         return torch.cuda.is_available()
@@ -213,5 +240,5 @@ class SVS(nn.Module):
                 f'  n_fc_layer: {self.n_fc_layer}\n'+ \
                 f'  num_heads: {self.num_heads}\n'+ \
                 f'  len_features: {self.max_num_atoms}\n'+ \
-                f'  num_class: {self.num_class}\n' + \
+                f'  out_dim: {self.out_dim}\n' + \
                 ')'

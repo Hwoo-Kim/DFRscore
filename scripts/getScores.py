@@ -100,21 +100,16 @@ def calculateSAScore(m):
 
 def getSAScore(smi:str):
     '''
-    Original SA score scale is [1,10]. Larger the score is, harder synthesis of corresponding molecule is.
-    Rescaled score scale is [0,1]. Larger the score is, easier synthesis of corresponding molecule is.
+    SA score scale is [1,10]. Larger the score is, harder synthesis of corresponding molecule is.
     '''
-    m, M = 1.0, 10.0
     mol = Chem.MolFromSmiles(smi)
     score = calculateSAScore(mol)
-    rescaled_score = (score-m)/(M-m)
-    rescaled_score = rescaled_score*(-1)+1
-    return rescaled_score
+    return score
 
 # 2. SC Score
 def getSCScore(smis:list):
     '''
-    Original SC score scale is [1,5]. Larger the score is, harder synthesis of corresponding molecule is.
-    Rescaled score scale is [0,1]. Larger the score is, easier synthesis of corresponding molecule is.
+    SC score scale is [1,5]. Larger the score is, harder synthesis of corresponding molecule is.
     '''
     import sys 
     import_path = op.join(op.dirname(op.abspath(__file__)), 'scscore/scscore/')
@@ -131,13 +126,11 @@ def getSCScore(smis:list):
     model_root = op.join(op.dirname(op.abspath(__file__)), 'scscore/')
     model.restore(op.join(model_root, 'models', 'full_reaxys_model_1024bool', 'model.ckpt-10654.as_numpy.json.gz'))
 
-    m, M = 1.0, 5.0
     raw_scores = []
     for smi in smis:
         (smi, raw_score) = model.get_score_from_smi(smi)
         raw_scores.append(raw_score)
-    rescaled_score = rescale_score(raw_scores, m=m, M=M, reverse=True)    # rescaled into [0,1]
-    return rescaled_score
+    return raw_scores
 
 if __name__=='__main__':
     smis = ['CC', 'CCCC', 'CCC(=O)O', 'C1CCCCC1', 'c1ccccc1', 'c1ccccc1O']

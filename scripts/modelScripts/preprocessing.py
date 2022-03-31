@@ -28,6 +28,7 @@ def processing_data(data_dir,max_step,logger,num_data):
         if i == 0:
             with open(f'{data_dir}/neg{max_step}.smi', 'r') as fr:
                smis = fr.read().splitlines()
+            label = float(5)
         else:
             with open(f'{data_dir}/pos{i}.smi', 'r') as fr:
                 smis = fr.read().splitlines()
@@ -76,6 +77,8 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
     all_data_dicts = {}
     tmp=0
     for label, size in enumerate(class_sizes):
+        if label == 0:
+            label = len(class_sizes)
         names = [f'{label}_{tmp+idx}.pkl' for idx in range(size)]
         all_data_dicts[label] = names
         tmp += size
