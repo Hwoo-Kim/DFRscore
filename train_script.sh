@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -N SVS_Regression_ELU_added_1
+#PBS -N nConv6_nfc4_convdim256_fcdim128
 #PBS -l nodes=gnode2:ppn=4:gpu
 #PBS -l walltime=5:00:00 
 
@@ -12,7 +12,7 @@ source activate SVS
 cd ~/SVS
 
 data_dir=save/PubChem4M/retro_result/
-model_save_name=Regression_ELU_added_1
+model_save_name=nConv6_nfc4_convdim256_fcdim128
 #data_preprocessing=no_additional_seed1024
 data_preprocessing=DATA_Regression
 
@@ -20,7 +20,7 @@ data_preprocessing=DATA_Regression
 # Not yet.
 num_data=250000
 num_epoch=300
-lr=0.0001
+lr=0.0004
 batch_size=128
 problem=regression
 

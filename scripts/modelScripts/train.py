@@ -18,12 +18,14 @@ import copy
 import argparse
 from datetime import datetime
 
-ZERO=None
-NEG_MIN=None
+
+MAX_STEP=None
 
 def HingeMSELoss(y_pred, y_true):
+    global MAX_STEP
+    ZERO = torch.tensor(0).float().to(y_pred.device)
+    NEG_MIN = torch.tensor(MAX_STEP+1).float().to(y_pred.device)
     y_true = y_true.float()
-    y_pred = y_pred.squeeze(-1)
     return  torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
 
 def train(model,loss_fn,optimizer,train_data_loader):
@@ -92,9 +94,13 @@ def train_SVS(args):
             "args.problem must be one between ['regression', 'classification']"
     if args.problem == 'regression':
         loss_fn = HingeMSELoss
-        args.max_step = 0
+        args.out_dim = 1
     else:
         loss_fn = nn.CrossEntropyLoss(reduction='mean')
+        args.out_dim = args.max_step + 1
+    global MAX_STEP
+    MAX_STEP = args.max_step
+
     predictor = SVS(
             conv_dim=args.conv_dim,
             fc_dim=args.fc_dim,
@@ -103,7 +109,7 @@ def train_SVS(args):
             num_heads=args.num_heads,
             len_features=args.len_features,
             max_num_atoms=args.max_num_atoms,
-            out_dim=args.max_step+1,
+            out_dim=args.out_dim,
             problem=args.problem,
             dropout=args.dropout)
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
@@ -116,9 +122,6 @@ def train_SVS(args):
                     )
     lr = args.lr
     predictor.cuda()
-    global ZERO, NEG_MIN
-    ZERO = torch.tensor(0).float().to(predictor.device)
-    NEG_MIN = torch.tensor(args.max_step+1).float().to(predictor.device)
 
     log('  ----- Train Config Information -----')
     #log(f' data dir: {data_dir}')

@@ -96,8 +96,8 @@ class SVS(nn.Module):
             x = self.relu(x)
             x = self.dropout(x)
         retval = self.pred_layer(x)
-        #if self.problem=='regression':
-            #retval = self.elu(retval)+1
+        if self.problem=='regression':
+            retval = self.elu(retval).squeeze(-1)+1.5
         return retval
 
     def restore(self, path_to_model):
@@ -165,7 +165,6 @@ class SVS(nn.Module):
             'input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol.'
         assert not (self.problem=='regression' and get_probs), \
             'Cannot get probabilites for Regression problem.'
-        self.device = self.embedding.weight.device
         feature, adj = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
         adj= adj.float().unsqueeze(0).to(self.device)
@@ -195,7 +194,6 @@ class SVS(nn.Module):
         # TODO: 너무 크다 싶으면 10000개 씩 잘라서 하는 등 활용 가능.
         assert not (self.problem=='regression' and get_probs), \
             'Cannot get probabilites for Regression problem.'
-        self.device = self.embedding.weight.device
         padded_features, padded_adjs = self.mols_to_graph_feature(mol_list)
         data_set = InferenceDataset(features=padded_features, adjs=padded_adjs)
         data_loader = DataLoader(data_set, batch_size = batch_size, shuffle=False)

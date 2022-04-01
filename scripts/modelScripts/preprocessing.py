@@ -17,9 +17,10 @@ import time
 from datetime import datetime
 
 DATA_SPLIT_SEED = 1024
+PROBLEM = None
 # 1. Data splitting functions
 def processing_data(data_dir,max_step,logger,num_data):
-    global DATA_SPLIT_SEED
+    global DATA_SPLIT_SEED, PROBLEM
     random.seed(DATA_SPLIT_SEED)
     # splitting
     smis_w_label = []
@@ -28,7 +29,8 @@ def processing_data(data_dir,max_step,logger,num_data):
         if i == 0:
             with open(f'{data_dir}/neg{max_step}.smi', 'r') as fr:
                smis = fr.read().splitlines()
-            label = float(5)
+            if PROBLEM == 'regression':
+                label = float(max_step+1)
         else:
             with open(f'{data_dir}/pos{i}.smi', 'r') as fr:
                 smis = fr.read().splitlines()
@@ -76,8 +78,10 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
 
     all_data_dicts = {}
     tmp=0
+    global PROBLEM
+
     for label, size in enumerate(class_sizes):
-        if label == 0:
+        if label == 0 and PROBLEM=='regression':
             label = len(class_sizes)
         names = [f'{label}_{tmp+idx}.pkl' for idx in range(size)]
         all_data_dicts[label] = names
@@ -281,6 +285,9 @@ def train_data_preprocess(args):
         log('1. Data preprocessing phase')
         log(f'  Started at: {since_inform}')
         log(f'  Data will be generated in: {preprocess_dir}')
+
+    global PROBLEM
+    PROBLEM = args.problem
 
     ratio = [8,1,1]         # train : val : test
     log()

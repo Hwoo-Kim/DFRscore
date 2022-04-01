@@ -40,7 +40,7 @@ if __name__=='__main__':
     parser.add_argument('--conv_dim', type = int, default=256, help = 'graph conv layer hidden dimension')
     parser.add_argument('--fc_dim', type = int, default=128, help = 'fc layer hidden dimension')
     parser.add_argument('--dropout', type = float, default=0.2, help = 'dropout for edge drop and normal dropout')
-    parser.add_argument('--num_epoch',type = int, default=500, help = 'number of epochs')
+    parser.add_argument('--num_epoch',type = int, default=300, help = 'number of epochs')
     parser.add_argument('--lr',type = float, default=2e-4, help = 'learning rate')
     # For ExponentialLR
     parser.add_argument('--gamma',type = float, default=0.99, help = 'decaying rate')
