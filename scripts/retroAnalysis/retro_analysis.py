@@ -306,11 +306,11 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, log):
             break
         else:
             targets, depth, templates, task_idx = args
-            if num_tasks <= 5:
-                log(f'  task started: [{task_idx}/{num_tasks}]')
-            elif task_idx%(num_tasks//5)==0:
-                log(f'  task started: [{task_idx}/{num_tasks}]')
             retrosynthetic_analysis_single_batch(targets, reactant_bag, depth, templates, task_idx, exclude_in_R_bag)
+            if num_tasks <= 5:
+                log(f'  task finished: [{task_idx}/{num_tasks}]')
+            elif task_idx%(num_tasks//5)==0:
+                log(f'  task finished: [{task_idx}/{num_tasks}]')
     return True
 
 

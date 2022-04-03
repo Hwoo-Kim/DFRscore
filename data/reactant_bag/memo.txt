@@ -2,5 +2,12 @@ ZINC_reactants.smi:
   1. Downloaded tranches whose molecular weight up to 250 D and log P up to 3.5
     that had reactivity labeled as “standard” or “reactive” from ZINC 15.
   (https://zinc.docking.org)
-  2. Filtered with 'filter.py'.
+  2. Filtered with 'zinc_filter.py'.
   3. Converted into canonicalized SMILES.
+
+emolecules.smi:
+  1. Downloaded 'version.smi.gz' file in '2022-03-01' directory.
+  (https://downloads.emolecules.com/free/)    
+  2. Filtered with 'emolecules_filter.py'.
+  3. Converted into canonicalized SMILES.   
+    --> <emolecules.smi>

@@ -11,11 +11,11 @@ from scripts.utils import logger
 save_dir = 'PubChem'       # DONOT USE '/' in front and back!
 test_file_path = '/home/hwkim/SVS/save/PubChem4M/retro_result/DATA_Regression/smi_split_result.pkl'
 #test_file_path = '/Users/hwkim/works/SVS/Experiments/exp1/smi_split_result.pkl'
-regression_model_path = '/home/hwkim/SVS/save/PubChem4M/Regression_nConv6_nfc4_convd256_fcd128_drop0.2_totdeg/GAT_model_160.pt'
-#classification_model_path = '/home/hwkim/SVS/save/PubChem4M/nConv6_nfc4_convd256_fcd128_drop0.2_totdeg/GAT_best_model_155.pt'
-classification_model_path = None
-each_class_sizes = [20, 20, 20, 20, 20]
-#each_class_sizes = [2000, 2000, 2000, 2000, 2000]
+regression_model_path = '/home/hwkim/SVS/save/PubChem4M/Loss_modified_Regression_ELU_added_1.5/GAT_model_160.pt'
+classification_model_path = '/home/hwkim/SVS/save/PubChem4M/nConv6_nfc4_convd256_fcd128_drop0.2_totdeg/GAT_best_model_155.pt'
+#classification_model_path = None
+#each_class_sizes = [20, 20, 20, 20, 20]
+each_class_sizes = [2000, 2000, 2000, 2000, 2000]
 num_cores = 4
 max_step=4
 
@@ -40,7 +40,7 @@ if regression_model_path:
                 problem='regression'
                 )
     predictor.restore(regression_model_path)
-    #predictor = predictor.cuda()
+    predictor = predictor.cuda()
     
     # Get Evaluation Metrics
     result = runExp01(predictor, 
@@ -68,7 +68,7 @@ if classification_model_path:
                 out_dim=max_step+1
                 )
     predictor.restore(classification_model_path)
-    #predictor = predictor.cuda()
+    predictor = predictor.cuda()
     
     # Get Evaluation Metrics
     result = runExp01(predictor, 

@@ -17,7 +17,7 @@ def retrosynthetic_analysis(args):
     
     # 1. Preprocessing reactant set
     from scripts.retroAnalysis.R_set_generator import R_set_generator
-    R_set_generator(args, use_inchikey=False)
+    R_set_generator(args, use_inchikey=False, canonicalize=False)
 
     # 2. Retrosynthetic analysis
     if args.path:

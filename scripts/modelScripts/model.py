@@ -204,7 +204,7 @@ class SVS(nn.Module):
             A = batch['adj'].float().to(self.device)
             scores.append(self.forward(x,A).to('cpu').detach())
         if self.problem == 'regression':
-            return torch.concat(scores).squeeze(-1).numpy()
+            return torch.cat(scores).squeeze(-1).numpy()
         else:
             probs = self.softmax(torch.cat(scores)).numpy()
             if get_probs:

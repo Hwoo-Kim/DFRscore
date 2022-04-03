@@ -80,18 +80,18 @@ def runExp01(predictor,
     # 2-1. get scores SA score, SC score, and SVS
     # SA score and SC score were already rescaled into [0, 1].
     logger('\n  Calculating scores...')
-    logger('  calculating SA score... (not rescaled!)', end='\t')
-    p = Pool(num_cores)
-    SAScores = p.map_async(getSAScore, test_smi_list)
-    SAScores.wait()
-    p.close()
-    p.join()
-    SAScores=SAScores.get()
+    #logger('  calculating SA score... (not rescaled!)', end='\t')
+    #p = Pool(num_cores)
+    #SAScores = p.map_async(getSAScore, test_smi_list)
+    #SAScores.wait()
+    #p.close()
+    #p.join()
+    #SAScores=SAScores.get()
     #SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
-    logger('  Done.')
-    logger('  calculating SC score... (not rescaled!)', end='\t')
-    SCScores = getSCScore(test_smi_list)
-    logger('  Done.')
+    #logger('  Done.')
+    #logger('  calculating SC score... (not rescaled!)', end='\t')
+    #SCScores = getSCScore(test_smi_list)
+    #logger('  Done.')
     logger('  calculating SVS...', end='\t')
     SVSs = predictor.smiListToScores(test_smi_list)
     if problem == 'classification':
@@ -124,36 +124,40 @@ def runExp01(predictor,
         Acc_bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list2, neg_label = 0)
         Scalar_bin = BinaryConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list3, neg_label = 0)
         logger('  1. Max Probability')
-        max_bin_acc, max_bin_prec, max_bin_critical_err = \
-                Max_bin_conf_matrix.get_accuracy(), Max_bin_conf_matrix.get_precision(), Max_bin_conf_matrix.get_critical_error()
-        logger('   Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-        logger(f'   {max_bin_acc}, {max_bin_prec}, {max_bin_critical_err}', end=', ')
+        max_bin_acc, max_bin_prec, max_bin_recall, max_bin_critical_err = \
+                Max_bin_conf_matrix.get_accuracy(), Max_bin_conf_matrix.get_precision(), \
+                Max_bin_conf_matrix.get_recall(), Max_bin_conf_matrix.get_critical_error()
+        logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
+        logger(f'   {max_bin_acc}, {max_bin_prec}, {max_bin_recall}, {max_bin_critical_err}', end=', ')
         #logger(get_AUROC(true_label_list, pred_label_list1))
-        logger('Cannot be defined in the mannor of max probability.')
+        logger('auroc is not defined in this mannor.')
 
         logger('  2. Accumulated Probability')
-        acc_bin_acc, acc_bin_prec, acc_bin_critical_err = \
-                Acc_bin_conf_matrix.get_accuracy(), Acc_bin_conf_matrix.get_precision(), Acc_bin_conf_matrix.get_critical_error()
-        logger('   Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-        logger(f'   {acc_bin_acc}, {acc_bin_prec}, {acc_bin_critical_err}', end=', ')
-        logger(get_AUROC(true_label_list, 1-SVS_probs[:,0]))
+        acc_bin_acc, acc_bin_prec, acc_bin_recall, acc_bin_critical_err = \
+                Acc_bin_conf_matrix.get_accuracy(), Acc_bin_conf_matrix.get_precision(), \
+                Acc_bin_conf_matrix.get_recall(), Acc_bin_conf_matrix.get_critical_error()
+        logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
+        logger(f'   {acc_bin_acc}, {acc_bin_prec}, {acc_bin_recall}, {acc_bin_critical_err}', end=', ')
+        #logger(get_AUROC(true_label_list, 1-SVS_probs[:,0]))
+        logger('auroc is not defined in this mannor.')
 
         logger('  3. Scalar score')
         logger(f'   used threshold: {threshold}')
-        scalar_bin_acc, scalar_bin_prec, scalar_bin_critical_err = \
-                Scalar_bin.get_accuracy(), Scalar_bin.get_precision(), Scalar_bin.get_critical_error()
-        logger('   Bin_acc, Bin_prec, Bin_critical_err, auroc =')
-        logger(f'   {scalar_bin_acc}, {scalar_bin_prec}, {scalar_bin_critical_err}', end=', ' )
-        logger(get_AUROC(true_label_list, SVSs))
+        scalar_bin_acc, scalar_bin_prec, scalar_bin_recall, scalar_bin_critical_err = \
+                Scalar_bin.get_accuracy(), Scalar_bin.get_precision(), \
+                Scalar_bin.get_recall(), Scalar_bin.get_critical_error()
+        logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
+        logger(f'   {scalar_bin_acc}, {scalar_bin_prec}, {scalar_bin_recall}, {scalar_bin_critical_err}', end=', ' )
+        logger(get_AUROC(true_label_list, -1*np.array(SVSs)))
 
         # 2-4. SA score and SC score
-        logger('  4. SA score')
-        sas_auroc = get_AUROC(true_label_list, SAScores)
-        logger(f'   auroc = {sas_auroc}')
+        #logger('  4. SA score')
+        #sas_auroc = get_AUROC(true_label_list, SAScores)
+        #logger(f'   auroc = {sas_auroc}')
 
-        logger('  5. SC score')
-        scs_auroc = get_AUROC(true_label_list, SCScores)
-        logger(f'   auroc = {scs_auroc}')
+        #logger('  5. SC score')
+        #scs_auroc = get_AUROC(true_label_list, SCScores)
+        #logger(f'   auroc = {scs_auroc}')
 
         # 3. Setting for MCC test.
         true_label_list = []
@@ -168,11 +172,16 @@ def runExp01(predictor,
         logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
         logger(f'  {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
 
+        #bin_result_dict = {
+        #        'max_bin_acc': max_bin_acc, 'max_bin_prec': max_bin_prec, 'max_bin_critical_err': max_bin_critical_err,
+        #        'acc_bin_acc': acc_bin_acc, 'acc_bin_prec': acc_bin_prec, 'acc_bin_critical_err': acc_bin_critical_err,
+        #        'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err,
+        #        'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
+        #        }
         bin_result_dict = {
                 'max_bin_acc': max_bin_acc, 'max_bin_prec': max_bin_prec, 'max_bin_critical_err': max_bin_critical_err,
                 'acc_bin_acc': acc_bin_acc, 'acc_bin_prec': acc_bin_prec, 'acc_bin_critical_err': acc_bin_critical_err,
-                'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err,
-                'sa_auroc': sas_auroc, 'sc_auroc':scs_auroc
+                'scalar_bin_acc': scalar_bin_acc, 'scalar_bin_prec': scalar_bin_prec, 'scalar_bin_critical_err': scalar_bin_critical_err
                 }
         mcc_result_dict = {
                 'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_recall': macro_avg_recall,
@@ -196,7 +205,6 @@ def runExp01(predictor,
         # 2-2. Use our model as as binary classification model.
         # Threshold must be max_step+0.5
         threshold = max_step+0.5
-        print(SVSs)
         bin_label_list = (SVSs<threshold).astype(int)
 
         # 2-3. Confusion matrix and evaluate metrics
@@ -207,16 +215,16 @@ def runExp01(predictor,
                 bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
         logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
         logger(f'   {bin_acc}, {bin_prec}, {bin_recall},{bin_critical_err}', end=', ')
-        logger(get_AUROC(true_label_list, SVSs))
+        logger(get_AUROC(true_label_list, -1*np.array(SVSs)))
 
         # 2-4. SA score and SC score
-        logger('  2. SA score')
-        sas_auroc = get_AUROC(true_label_list, SAScores)
-        logger(f'   auroc = {sas_auroc}')
+        #logger('  2. SA score')
+        #sas_auroc = get_AUROC(true_label_list, SAScores)
+        #logger(f'   auroc = {sas_auroc}')
 
-        logger('  3. SC score')
-        scs_auroc = get_AUROC(true_label_list, SCScores)
-        logger(f'   auroc = {scs_auroc}')
+        #logger('  3. SC score')
+        #scs_auroc = get_AUROC(true_label_list, SCScores)
+        #logger(f'   auroc = {scs_auroc}')
 
         # 3. Setting for MCC test.
         true_label_list = []

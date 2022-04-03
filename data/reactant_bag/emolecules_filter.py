@@ -1,25 +1,12 @@
 import os, sys
-from multiprocessing import Lock, Process, Queue, current_process
+import time
+from multiprocessing import Process, Queue
 import queue
 from tqdm import tqdm
-from rdkit import Chem
-from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
-#from rdkit.Chem.AllChem import CalcNumRotatableBonds
-#from rdkit.Chem.Descriptors import TPSA
-#from rdkit.Chem.Lipinski import NumHAcceptors, NumHDonors
-from rdkit.Chem.Descriptors import ExactMolWt
-from rdkit.Chem.EnumerateStereoisomers import GetStereoisomerCount
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
-import random, time
-
-def MolWt(mol):
-    return ExactMolWt(mol) < 600
-
-def Stereo(mol):
-    return GetStereoisomerCount(mol) == 1       # only molecules all the stereo configuraion are specified.
 
 def NoStar(s):
     return s.count('*') == 0
@@ -27,16 +14,20 @@ def NoStar(s):
 def OneMol(s):
     return s.count('.') == 0
 
-def Sanitize(mol):
-    return int(Chem.SanitizeMol(mol, catchErrors=True))==0
-
-def OrganicSubset(mol):
-    organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
-    atoms = mol.GetAtoms()
-    for a in atoms:
-        if not a.GetSymbol() in organic_subset:
-            return False
-    return True
+def RemoveSideChemical(s):
+    if s.count('.')>1: return 'more_than_two'
+    s1, s2 = s.split('.')
+    m1, m2 = Mol(s1), Mol(s2)
+    num1, num2 = 0,0
+    if not m1 is None:
+        for a in m1.GetAtoms():
+            if a.GetSymbol()=='C': num1+=1
+    if not m2 is None:
+        for a in m2.GetAtoms():
+            if a.GetSymbol()=='C': num2+=1
+    if num1>num2: return s1
+    elif num1<num2: return s2
+    else: return False
 
 def do_job(tasks):
     while True:
@@ -49,19 +40,27 @@ def do_job(tasks):
             ps_numb, smiles, dir_name = task
             ms = []
             iterator = smiles
-            if ps_numb ==0: iterator = tqdm(smiles, total = len(smiles))
+            if ps_numb ==0:
+                iterator = tqdm(smiles, total = len(smiles))
+            more_than_two = 0
             for s in iterator:
-                if not OneMol(s): continue
                 if not NoStar(s): continue
+                if not OneMol(s):
+                    s = RemoveSideChemical(s)
+                if not s:
+                    continue
+                if s == 'more_than_two':
+                    more_than_two+=1
+                    continue
                 try: mol = Mol(s)
-                except: continue
-                if mol == None: continue
-                if not Stereo(mol): continue
-                if not MolWt(mol): continue
-                if not Sanitize(mol): continue
-                if not OrganicSubset(mol): continue
+                except:
+                    continue
+                if mol is None: continue
                 ms.append(Smiles(mol)+'\n')
             
+            if ps_numb == 0:
+                print(f'length of given smiles: {len(smiles)}')
+                print(f'length of passed smiles: {len(ms)}')
             with open(dir_name + "filtered_%d.txt" %(ps_numb), 'w') as fw:
                 fw.writelines(ms)
     return True
