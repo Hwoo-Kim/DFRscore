@@ -66,8 +66,13 @@ def retro_save_dir_setting(root, args):
 def train_save_dir_setting(args):
     data_dir = os.path.normpath(args.data_dir)
     retro_data_dir = '/'.join(data_dir.split('/')[:-1])
-    #data_dir = args.data_dir
     save_dir = os.path.normpath(os.path.join(retro_data_dir,args.save_name))
+
+    if '/' in args.save_name:
+        out_dir, inner_dir = args.save_name.split('/')
+        out_dir = os.path.join(retro_data_dir, out_dir)
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
     
     if os.path.exists(save_dir):
         i = 2
@@ -136,90 +141,13 @@ def get_cuda_visible_devices(num_gpus: int) -> str:
 
     return idle_gpus
 
-"""
-def reactant_frags_generator(templates):
-    '''
-    Function: get only reactant parts
-      Args:
-        templates: target template list.
-
-      Returns:
-        reactant_fragments: extracted reactant fragment.
-    '''
-    reactant_fragments = []
-    for temp in templates:
-        idx = temp.index('>>')
-        reactant_fragments.append(temp[:idx])
-    return reactant_fragments
-
-def reactant_frag_generator(template):
-    '''
-    Function: get only reactant part
-      Args:
-        template: target template.
-
-      Returns:
-        reactant_fragments: extracted reactant fragment.
-    '''
-    idx = template.index('>>')
-    return template[:idx]
-
-def target_enumerator(targets, reactant_frag, option:str):
-    '''
-    Function: check which targets the given template is applicable to using FragmentMatcher.
-      Args:
-        targets: target chemicals. list of SMILES.
-        reactant_frag: fragment of only reactant part.
-        start: the start index to be used to count molecule index.
-
-      Returns:
-        applicable_target_smiles: applicable target smiles about the given reactant_frag. (list)
-    '''
-    mols = [Chem.MolFromSmiles(smiles) for smiles in targets]
-    if '.' in reactant_frag:
-        p1=FragmentMatcher()
-        p1.Init(reactant_frag[:reactant_frag.index('.')])
-        p2=FragmentMatcher()
-        p2.Init(reactant_frag[reactant_frag.index('.')+1:])
-        Matchers = [p1,p2]
-    else:
-        p = FragmentMatcher()
-        p.Init(reactant_frag)
-        Matchers = [p]
-
-    if option == 'classify':
-        applicable_target_smiles= []
-        for idx, mol in enumerate(mols):
-            if mol == None: continue
-            for matcher in Matchers:
-                if matcher.HasMatch(mol):
-                    applicable_target_smiles.append(targets[idx])
-                    break
-            continue
-        return applicable_target_smiles
-
-    elif option == 'extract':
-        count_applicable_targets = 0
-        for mol in mols:
-            if mol == None: continue
-            if p.HasMatch(mol):
-                count_applicable_targets +=1
-                continue
-        return count_applicable_targets
-
-    elif option == 'pos_neg_gen':
-        pos_set, neg_set = [], []
-        for idx, mol in enumerate(mols):
-            pos = False
-            if mol == None: continue
-            for matcher in Matchers:
-                if matcher.HasMatch(mol):
-                    pos_set.append(targets[idx])
-                    pos = True
-                    break
-                else: continue
-            if not pos:
-                neg_set.append(targets[idx])
-            continue
-        return pos_set, neg_set
-"""
+if __name__=='__main__':
+    limit = 3
+    @timeout(limit)
+    def foo(sec):
+        time.sleep(sec)
+        print('Here')
+    try:
+        foo(4)
+    except TimeoutError as e:
+        print('Timeout!')

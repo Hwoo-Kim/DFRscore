@@ -35,11 +35,15 @@ if __name__=='__main__':
     parser.add_argument("--reactant", help='path to reactant bag smiles file', type=str)
     parser.add_argument("--retro_target", help='path to retrosynthetic target smiles file', type=str)
     parser.add_argument("--depth", help='retrosynthetic analysis max depth', type=int)
+    parser.add_argument("--start_index", help='from which line retro analysis to be started', default=0, type=int)
     parser.add_argument("--num_molecules", help='number of molecules to be analyzed', type=int)
     parser.add_argument("--num_cores", help='number of cores used for multiprocessing', type=int)
     parser.add_argument("--save_name", help='directory where all the retro results will be saved', default='save', type=str)
-    parser.add_argument("--path", help='whether restoring synthesis path or not. if Ture, more time required.', default=False, type=bool)
+    parser.add_argument("--path", help='whether restoring synthesis path or not. if Ture, more time required.', default='False', type=str)
     parser.add_argument("--exclude_in_R_bag", help='whether excluding molecules in retro_target file included in R bag', default=True, type=bool)
     parser.add_argument("--batch_size", help='batch size for retrosynthetic analysis', default=100, type=int)
+    parser.add_argument("--max_time", help='timeout criteria for a single molecule retro_analysis', default=180, type=int)
     args = parser.parse_args()
+    assert args.path == 'True' or args.path == 'False', "args.path must be one of 'True' and 'False'."
+    args.path = args.path == 'True'
     retrosynthetic_analysis(args)

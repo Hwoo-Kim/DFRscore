@@ -4,7 +4,7 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
-from multiprocessing import Lock, Process, Queue, current_process 
+from multiprocessing import Process, Queue
 from datetime import datetime
 import queue # imported for using queue.Empty exception
 import pickle
@@ -15,8 +15,6 @@ import shutil
 from copy import deepcopy
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
-
-DATA_FORMAT = None
 
 def cure_rxn_result(pair):
     """
@@ -60,11 +58,14 @@ def list_duplicates_of(seq,item):
     return locs
 
 def duplicate_remove(list_of_list):
+    '''
+    Inner lists are sorted ones.
+    '''
     if list_of_list == []:
         return []
     result = []
     for s in list_of_list:
-        if not s in result and not s[-1] in result:
+        if not s in result:
             result.append(s)
     return result
     
@@ -76,7 +77,7 @@ def onestep_by_reactions(target_in_mol, rxn_objs):
         try:
             rxn_results = rxn.RunReactants([target_in_mol])
         except:
-            print(Smiles(target_in_mol))
+            #print(Smiles(target_in_mol))
             continue
         for pair in rxn_results:
             sanitize_check = [int(Chem.SanitizeMol(mol, catchErrors=True)) == 0 for mol in pair]
@@ -136,11 +137,7 @@ def further_batch_reaction(reaction_result, rxn_objs):
     return reaction_result
 
 def initial_R_bag_check(targets_in_mol:list, reactant_bag:set):
-    global DATA_FORMAT
-    if DATA_FORMAT == 'smiles':
-        mol_in_text = [Smiles(mol) for mol in targets_in_mol]
-    elif DATA_FORMAT == 'inchikey':
-        mol_in_text = [inchi.MolToInchiKey(mol) for mol in targets_in_mol]
+    mol_in_text = [Smiles(mol) for mol in targets_in_mol]
     in_R_bag_smi,in_R_bag_mol = [], []
     otherwise_smi, otherwise_mol = [], []
     for idx, text in enumerate(mol_in_text):
@@ -161,7 +158,6 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
       positives: 
       batch_reaction_result: 
     '''
-    global DATA_FORMAT
     positives = []
     diff = target_depth-current_depth
     if diff >0:
@@ -175,8 +171,6 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
                 precursor_R_bag_check = []
 
                 for smi in to_be_checked:
-                    if DATA_FORMAT == 'inchikey':
-                        smi = inchi.MolToInchiKey(Mol(smi))
                     check = smi in reactant_bag
                     precursor_R_bag_check.append(check)
                     if precursor_R_bag_check.count(False) > limit_numb:
@@ -209,8 +203,6 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
                 precursor_R_bag_check = []
 
                 for smi in to_be_checked:
-                    if DATA_FORMAT == 'inchikey':
-                        smi = inchi.MolToInchiKey(Mol(smi))
                     check = smi in reactant_bag
                     if not check:
                         break
@@ -227,21 +219,30 @@ def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int,
 
         return positives, None
 
-def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:set, depth:int, reactions:list, task_idx:int, exclude_in_R_bag:bool):
+def retrosynthetic_analysis_single_batch(
+        targets_in_smiles:list,
+        reactant_bag:set,
+        depth:int,
+        rxn_templates:list,
+        task_idx:int,
+        exclude_in_R_bag:bool
+        ):
     '''
     This code conducts retro-analysis recursively.
       e.g., depth=1 reult --> depth=2 result --> depth=3 result --> ...
     Args:
-      targets: list of target mol objects.
-      reactant_bag: set of reactants. Already augmented.
+      targets_in_smiles: list of target SMILES.
+      reactant_bag: set of reactants in SMILES. inchikey version deprecated.
       depth: the depth determining how many steps to use in retro-analysis in maximum.
-      reactions: list of reaction smarts. 'RETRO_smarts' given in str.
+      rxn_templates: list of reaction SMARTS.
+      task_idx: task idx in the multiprocessing.
+      exclude_in_R_bag: whether excluding target molecule if the molecule is in reactant bag.
     Returns:
       True 
     '''
     s = time.time()
     rxn_objects = []
-    for rxn in reactions:
+    for rxn in rxn_templates:
         try:
             rxn_objects.append(Rxn(rxn))
         except:
@@ -264,10 +265,10 @@ def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:se
     positives_dict[1] = positive_each_depth
     if depth == 1:
         negative_set = list(set(targets_in_smiles)-set(positives_dict[1]))
-        with open(f'tmp/positive_set_depth_1_{task_idx}.smi', 'w') as fw:
+        with open(f'tmp/pos1_{task_idx}.smi', 'w') as fw:
             to_write = [smi + '\n' for smi in positives_dict[1]]
             fw.writelines(to_write)
-        with open(f'tmp/negative_set_depth_1_{task_idx}.smi', 'w') as fw:
+        with open(f'tmp/neg{depth}_{task_idx}.smi', 'w') as fw:
             to_write = [smi + '\n' for smi in negative_set]
             fw.writelines(to_write)
         return True
@@ -290,10 +291,10 @@ def retrosynthetic_analysis_single_batch(targets_in_smiles:list, reactant_bag:se
     for current_depth in range(depth):
         current_depth += 1
         negative_set = negative_set-set(positives_dict[current_depth])
-        with open(f'tmp/positive_set_depth_{current_depth}_{task_idx}.smi', 'w') as fw:
+        with open(f'tmp/pos{current_depth}_{task_idx}.smi', 'w') as fw:
             to_write = [smi + '\n' for smi in positives_dict[current_depth]]
             fw.writelines(to_write)
-    with open(f'tmp/negative_set_depth_{depth}_{task_idx}.smi', 'w') as fw:
+    with open(f'tmp/neg{depth}_{task_idx}.smi', 'w') as fw:
         to_write = [smi + '\n' for smi in negative_set]
         fw.writelines(to_write)
     return True
@@ -305,8 +306,8 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, log):
         except queue.Empty:
             break
         else:
-            targets, depth, templates, task_idx = args
-            retrosynthetic_analysis_single_batch(targets, reactant_bag, depth, templates, task_idx, exclude_in_R_bag)
+            targets, depth, rxn_templates, task_idx = args
+            retrosynthetic_analysis_single_batch(targets, reactant_bag, depth, rxn_templates, task_idx, exclude_in_R_bag)
             if num_tasks <= 5:
                 log(f'  task finished: [{task_idx}/{num_tasks}]')
             elif task_idx%(num_tasks//5)==0:
@@ -314,13 +315,11 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, log):
     return True
 
 
-log = None
 def retrosyntheticAnalyzer(args):
     '''
     Main function. This conducts multiprocessing of 'retrosynthetic_analysis_single_batch'.
     '''
     #1. reading data from the input config.
-    global log
     log = args.logger
     log()
     log('2. Retrosynthetic Analysis Phase.')
@@ -331,7 +330,6 @@ def retrosyntheticAnalyzer(args):
     retro_target_path = args.retro_target
     os.chdir(args.save_dir)
     os.mkdir('tmp')
-    log = args.logger
 
     now = datetime.now()
     since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
@@ -351,14 +349,12 @@ def retrosyntheticAnalyzer(args):
             continue
         rxn_templates.append(temp['retro_smarts'])
 
-
     with open(os.path.join(args.root, retro_target_path), 'r') as fr:
         targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
     batch_size = min(args.batch_size, args.num_molecules//args.num_cores)
     if args.num_molecules % batch_size != 0:
         #num_of_tasks +=1
         batch_size +=1
-    max_time = 60
 
     log('  ----- Config information -----',
         f'  Target data path: {retro_target_path}',
@@ -366,21 +362,19 @@ def retrosyntheticAnalyzer(args):
         f'  Using augmented template: {args.using_augmented_template}',
         f'  Reactant data path: {reactant_path}',
         f'  Depth: {args.depth}',
+        f'  Start index: {args.start_index}',
         f'  Number of target molecules: {args.num_molecules}',
         f'  Number of cores: {args.num_cores}',
         f'  Batch size: {batch_size}',
         f'  Exclude_in_R_bag: {args.exclude_in_R_bag}',
-        f'  With path search: {args.path}')
-    if args.path:
-        log(f'  Max time: {max_time}')
+        f'  With path search: {args.path}',
+        f'  Max time: -')
 
     # 2. multiprocessing of do_retro_analysis
     log('  ----- Multiprocessing -----')
     with open(reactant_set_path, 'rb') as fr:
         reactant_data = pickle.load(fr)
-    data_format = reactant_data['format']
-    global DATA_FORMAT
-    DATA_FORMAT = data_format
+    #data_format = reactant_data['format']
     reactant_bag = reactant_data['data']
     num_of_tasks = args.num_molecules // batch_size
     if args.num_molecules % batch_size != 0:
@@ -394,7 +388,7 @@ def retrosyntheticAnalyzer(args):
     since = time.time()
     # creating tasks
     for task_idx in range(num_of_tasks):
-        batch_targets = targets[batch_size*task_idx:batch_size*(task_idx+1)]
+        batch_targets = targets[args.start_index+batch_size*task_idx:args.start_index+batch_size*(task_idx+1)]
         retro_args = (batch_targets, args.depth, rxn_templates, task_idx)
         tasks.put(retro_args)
 
@@ -431,7 +425,7 @@ def retrosyntheticAnalyzer(args):
         each_pos_result = []
         current_depth +=1
         for task_idx in range(num_of_tasks):
-            with open(f'tmp/positive_set_depth_{current_depth}_{task_idx}.smi', 'r') as fr:
+            with open(f'tmp/pos{current_depth}_{task_idx}.smi', 'r') as fr:
                 each_pos_result.append(fr.read())
         pos_result = ''.join(each_pos_result)
         numb_of_mols_in_each_pos.append(pos_result.count('\n'))
@@ -440,7 +434,7 @@ def retrosyntheticAnalyzer(args):
 
     each_neg_result = []
     for task_idx in range(num_of_tasks):
-        with open(f'tmp/negative_set_depth_{args.depth}_{task_idx}.smi', 'r') as fr:
+        with open(f'tmp/neg{args.depth}_{task_idx}.smi', 'r') as fr:
             each_neg_result.append(fr.read())
     neg_result = ''.join(each_neg_result)
     numb_of_mols_in_neg = neg_result.count('\n')

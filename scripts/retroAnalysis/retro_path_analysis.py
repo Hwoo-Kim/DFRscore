@@ -4,10 +4,8 @@ from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
 from rdkit.Chem.FragmentMatcher import FragmentMatcher
-from scripts.utils import reactant_frags_generator
-from scripts.utils import working_dir_setting
 from scripts.utils import timeout, TimeoutError
-from multiprocessing import Lock, Process, Queue, current_process 
+from multiprocessing import Process, Queue
 from datetime import datetime
 import queue # imported for using queue.Empty exception
 import pickle
@@ -19,7 +17,6 @@ from copy import copy, deepcopy
 from bisect import bisect_left
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
-
 
 class SynthesisTree:
     '''
@@ -99,13 +96,14 @@ class SynthesisTree:
         '''
         rxn_position is an index for notFinished list!!
         '''
+        global RXN_NAMES
         expanded_trees =[]
         elem = self.notFinished[rxn_position]
         loc = self.tree[-1].index(elem)
         for rxn_idx, result in rxn_results:
             copied_tree = self.getCopiedTree()
             copied_tree.insertList(loc, result)
-            copied_tree.tree[-1].append([loc, rxn_idx])
+            copied_tree.tree[-1].append([loc, RXN_NAMES[rxn_idx]])
             copied_tree.insertToNotFinished(rxn_position, result)
             copied_tree.setLastRxnInform(rxn_idx, result, rxn_position)
             expanded_trees.append(copied_tree)
@@ -140,6 +138,34 @@ class SynthesisTree:
         else:
             return None
 
+def cure_rxn_result(pair):
+    """
+    Cure the failed results which have a problem only in stereochemistry.
+    Especially for reduction reaction.
+    Ex) C[C@@H]-C(CC)C >> C[C@@H]=C(CC)C (false) , CC=C(CC)C (correct)
+    """
+    for mol in pair:
+        if int(Chem.SanitizeMol(mol, catchErrors=True)) == 0:
+            continue
+        #if int(Chem.SanitizeMol(mol, catchErrors=True)) != 2:   # SANITIZE_PROPERTIES
+        #    return None
+        atoms = mol.GetAtoms()
+        explicitH_counts = dict()
+        for idx, atom in enumerate(atoms):
+            if atom.GetHybridization()!=Chem.rdchem.HybridizationType(0):
+                continue
+            explicitH_counts[idx] = atom.GetNumExplicitHs()
+            atom.SetNumExplicitHs(0)
+        if int(Chem.SanitizeMol(mol, catchErrors=True)) != 0:
+            return None
+        for idx, atom in enumerate(atoms):
+            if not idx in explicitH_counts: continue
+            atom.SetNumExplicitHs(explicitH_counts[idx])
+            if atom.GetHybridization()!=Chem.rdchem.HybridizationType(0):
+                atom.SetNumExplicitHs(0)
+
+    return pair
+
 def list_duplicates_of(seq,item):
     start_at = -1
     locs = []
@@ -154,11 +180,14 @@ def list_duplicates_of(seq,item):
     return locs
 
 def duplicate_remove(list_of_list):
+    '''
+    Inner lists are sorted ones.
+    '''
     if list_of_list == []:
         return []
     result = []
     for s in list_of_list:
-        if not s[1] in result and not s[1][::-1] in result:
+        if not s in result:
             result.append(s)
     return result
     
@@ -170,13 +199,17 @@ def onestep_by_reactions(target_in_mol, rxn_objs):
         try:
             rxn_results = rxn.RunReactants([target_in_mol])
         except:
-            print(Smiles(target_in_mol))
+            #print(Smiles(target_in_mol))
             continue
         for pair in rxn_results:
+            sanitize_check = [int(Chem.SanitizeMol(mol, catchErrors=True)) == 0 for mol in pair]
+            if False in sanitize_check:
+                pair = cure_rxn_result(pair)
+                if pair is None: continue
             products_in_smi = [Smiles(mol) for mol in pair]
             if None in products_in_smi:
                 continue
-            to_add = [rxn_idx, products_in_smi]
+            to_add = [rxn_idx, sorted(products_in_smi)]
             if to_add in result:
                 continue
             else:
@@ -221,18 +254,8 @@ def further_reaction(syn_trees, rxn_objs):
     return new_syn_trees
 
 def initial_R_bag_check(target_in_smiles:list, reactant_bag:set):
-    canonicalized_smi= Smiles(Mol(target_in_smiles))
-    return canonicalized_smi in reactant_bag
-    """
-    if canonicalized_smi in reactant_bag:
-        in_R_bag_smi.append(smi)
-        in_R_bag_mol.append(targets_in_mol[idx])
-    else:
-        otherwise_smi.append(smi)
-        otherwise_mol.append(targets_in_mol[idx])
-    return in_R_bag_smi, in_R_bag_mol, otherwise_smi, otherwise_mol
-    """
-
+    #target_in_smiles = Smiles(Mol(target_in_smiles))
+    return target_in_smiles in reactant_bag
 
 def R_bag_check(synthesis_trees:list, reactant_bag:set, diff:int):
     '''
@@ -263,19 +286,28 @@ def R_bag_check(synthesis_trees:list, reactant_bag:set, diff:int):
     return synthesis_trees
 
 
-def batch_retro_analysis(targets:list, reactant_bag:set, depth:int, rxn_templates:list, task_idx:int, max_time:int, exclude_in_R_bag:bool):
+def batch_retro_analysis(
+        targets_in_smiles:list,
+        reactant_bag:set,
+        depth:int,
+        rxn_templates:list,
+        task_idx:int,
+        exclude_in_R_bag:bool,
+        max_time:int
+        ):
     '''
     This code conducts retro-analysis for a molecule by molecule recursively.
       e.g., depth=1 reult --> depth=2 result --> depth=3 result --> ...
     Args:
-      targets_in_smiles: target SMILES. given in str.
-      reactant_bag: set of reactants. Already augmented.
-      rxn_templates: list of reaction smarts. 'RETR_smarts' given in str.
+      targets_in_smiles: list of target SMILES.
+      reactant_bag: set of reactants in SMILES. inchikey version deprecated.
       depth: the depth determining how many steps to use in retro-analysis in maximum.
+      rxn_templates: list of reaction SMARTS.
       task_idx: task idx in the multiprocessing.
+      exclude_in_R_bag: whether excluding target molecule if the molecule is in reactant bag.
       max_time: timeout criteria for a single molecule retro_analysis.
     Returns:
-      None
+      True
     Saves the result file.
     '''
 
@@ -319,7 +351,7 @@ def batch_retro_analysis(targets:list, reactant_bag:set, depth:int, rxn_template
         Retroanalysis_only_smiles.append([])
         Retroanalysis_with_tree.append([]) 
 
-    for smi in targets:
+    for smi in targets_in_smiles:
         try:
             test_result, tree, _in_R_bag = retro_analysis(smi, reactant_bag, depth, rxn_templates)
         except TimeoutError as e:
@@ -338,170 +370,160 @@ def batch_retro_analysis(targets:list, reactant_bag:set, depth:int, rxn_template
 
     for current_depth in range(depth):
         current_depth += 1
-        with open(f'positive_set_depth_{current_depth}_{task_idx}.smi', 'w') as fw:
+        with open(f'tmp/pos{current_depth}_{task_idx}.smi', 'w') as fw:
             to_write = [smi + '\n' for smi in Retroanalysis_only_smiles[current_depth-1]]
             fw.writelines(to_write)
-        with open(f'positive_set_depth_{current_depth}_{task_idx}_with_tree.json', 'w') as fw:
+        with open(f'tmp/pos{current_depth}_{task_idx}_with_tree.json', 'w') as fw:
             json.dump(Retroanalysis_with_tree[current_depth-1], fw)
-    with open(f'negative_set_depth_{depth}_{task_idx}.smi', 'w') as fw:
+    with open(f'tmp/neg{depth}_{task_idx}.smi', 'w') as fw:
         to_write = [smi + '\n' for smi in Neg]
         fw.writelines(to_write)
-    with open(f'negative_set_depth_{depth}_{task_idx}.smi', 'w') as fw:
-        to_write = [smi + '\n' for smi in Neg]
+    with open(f'tmp/timed_out_{task_idx}.smi', 'w') as fw:
+        to_write = [smi + '\n' for smi in Failed]
         fw.writelines(to_write)
-    with open(f'in_reactant_bag_{task_idx}.smi', 'w') as fw:
+    with open(f'tmp/in_reactant_bag_{task_idx}.smi', 'w') as fw:
         to_write = [smi + '\n' for smi in in_R_bag]
         fw.writelines(to_write)
     return True
 
-def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag):
+def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, max_time, log):
     while True:
         try:
             args = tasks.get(timeout=1)
         except queue.Empty:
             break
         else:
-            #targets, depth, uni_templates, bi_templates, task_idx = args
-            targets, depth, rxn_templates, task_idx, max_time = args
-            since=time.time()
-            print(f'  task started: {task_idx}')
-            batch_retro_analysis(targets, reactant_bag, depth, rxn_templates, task_idx, max_time, exclude_in_R_bag)
-            print(f'    {task_idx}th task time: {(time.time()-since):.2f}')
+            targets, depth, rxn_templates, task_idx = args
+            batch_retro_analysis(targets, reactant_bag, depth, rxn_templates, task_idx, exclude_in_R_bag, max_time)
+            if num_tasks <= 5:
+                log(f'  task finished: [{task_idx}/{num_tasks}]')
+            elif task_idx%(num_tasks//5)==0:
+                log(f'  task finished: [{task_idx}/{num_tasks}]')
     return True
 
 
-def retrosyntheticAnalyzer(root, common_config, retrosynthetic_analysis_config):
+RXN_NAMES = None
+def retrosyntheticAnalyzer(args):
     '''
     Main function. This conducts multiprocessing of 'retrosynthetic_analysis_single_batch'.
     '''
-    print('2. Retrosynthetic Analysis Phase.')
+    #1. reading data from the input config.
+    log = args.logger
+    log()
+    log('2. Retrosynthetic Analysis Phase.')
+
+    reactant_path = args.reactant
+    reactant_set_path = os.path.join(args.root, 'data/reactant_bag/R_set.pkl')
+    template_path = args.template
+    retro_target_path = args.retro_target
+    os.chdir(args.save_dir)
+    os.mkdir('tmp')
+
     now = datetime.now()
     since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
-    print('  Retro analysis step started successfully.')
-    print(f'  retro analysis started at: {since_inform}')
-    #1. reading data from the input config.
-    dir_name =  str(common_config['dir_name'])
-    augmented_reactant_data = f'{dir_name}/reactant_augmentation/augmented_reactants.pkl'     # set
-    reactant_data = common_config['reactant_data']
-    templates_path = str(common_config['template_data'])
-    with open(f'{root}/{templates_path}', 'rb')  as fr:
+    log(f'  Started at: {since_inform}')
+
+    with open(os.path.join(args.root, template_path), 'rb')  as fr:
         templates = pickle.load(fr)
+    if args.using_augmented_template:
+        templates = templates['augmented']
+    else:
+        templates = templates['original']
+
+    global RXN_NAMES
+    rxn_short_names = []
     rxn_templates = []
-    for temp in templates:
+    for short_name, temp in templates.items():
         if temp == None:
+            rxn_short_names.append(None)
             rxn_templates.append(None)
             continue
+        rxn_short_names.append(short_name)
         rxn_templates.append(temp['retro_smarts'])
+    RXN_NAMES = rxn_short_names
 
-    depth = int(retrosynthetic_analysis_config['depth'])
-    numb_molecules = int(retrosynthetic_analysis_config['numb_molecules'])
-    start_index = int(retrosynthetic_analysis_config['start_index'])
-    target_data_name = str(retrosynthetic_analysis_config["target_data_name"])
-    with_path_search = True
-    max_time = int(retrosynthetic_analysis_config['max_time'])
-    with open(str(retrosynthetic_analysis_config['retro_analysis_target']), 'r') as fr:
-        targets = []
-        for i in range(start_index):
-            fr.readline()
-        for i in range(numb_molecules):
-            targets.append(fr.readline().rstrip())
-        #targets = fr.read().splitlines()[start_index:start_index+numb_molecules]
-    batch_size = int(retrosynthetic_analysis_config['batch_size'])
-    numb_cores = int(common_config['numb_cores'])
-    dir_name =  str(common_config['dir_name'])
-    exclude_in_R_bag = str(retrosynthetic_analysis_config['exclude_in_R_bag']) == 'True'
+    with open(os.path.join(args.root, retro_target_path), 'r') as fr:
+        targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
+    batch_size = min(args.batch_size, args.num_molecules//args.num_cores)
+    if args.num_molecules % batch_size != 0:
+        #num_of_tasks +=1
+        batch_size +=1
 
-    print('  Config information:')
-    print(f'    Target data path: {retrosynthetic_analysis_config["retro_analysis_target"]}')
-    print(f'    Target data name: {target_data_name}')
-    print(f'    Template data: {templates_path}')
-    print(f'    Start index: {start_index}')
-    print(f'    Reactant_data: {reactant_data}')
-    print(f'    Augmented reactant bag path: {augmented_reactant_data}')
-    print(f'    Depth: {depth}')
-    print(f'    Number of target molecules: {numb_molecules}')
-    print(f'    Number of cores: {numb_cores}')
-    print(f'    Batch size: {batch_size}')
-    print(f'    With path search: {with_path_search}')
-    print(f'    Max time: {max_time}')
-    print(f'    Exclude_in_R_bag: {exclude_in_R_bag}')
+    log('  ----- Config information -----',
+        f'  Target data path: {retro_target_path}',
+        f'  Template data path: {template_path}',
+        f'  Using augmented template: {args.using_augmented_template}',
+        f'  Reactant data path: {reactant_path}',
+        f'  Depth: {args.depth}',
+        f'  Start index: {args.start_index}',
+        f'  Number of target molecules: {args.num_molecules}',
+        f'  Number of cores: {args.num_cores}',
+        f'  Batch size: {batch_size}',
+        f'  Exclude_in_R_bag: {args.exclude_in_R_bag}',
+        f'  With path search: {args.path}',
+        f'  Max time: {args.max_time}')
 
-    # 2. make a new working directory and change directory. config file report.
-    working_dir = working_dir_setting(dir_name, target_data_name)
-    #working_dir = f'{os.getcwd()}/retrosynthetic_analysis/scratch1'
-    #os.chdir(working_dir)
-    print(f'  Current working directory is:\n    {working_dir}')
-
-    with open(f'{working_dir}/Input_config_file.txt', 'w') as fw:
-        fw.writelines([f'----- Config information -----\n', \
-            f'  Retro analysis started at: {since_inform}\n', \
-            f'  Target data path: {retrosynthetic_analysis_config["retro_analysis_target"]}\n', \
-            f'  Target data name: {target_data_name}\n', \
-            f'  Template data: {templates_path}\n', \
-            f'  Start index: {start_index}\n',f'  Reactant_data: {reactant_data}\n',\
-            f'  Augmented reactant bag path: {augmented_reactant_data}\n', f'  Depth: {depth}\n', \
-            f'  Number of target molecules: {numb_molecules}\n', f'  Number of cores: {numb_cores}\n', f'  Batch size: {batch_size}\n', \
-            f'  With path search: {with_path_search}\n', f'  Max time: {max_time}\n', f'  Exclude_in_R_bag: {exclude_in_R_bag}'])
-
-    # 3. multiprocessing of do_retro_analysis
-    with open(f'{root}/{augmented_reactant_data}', 'rb') as fr:
+    # 2. multiprocessing of do_retro_analysis
+    log('  ----- Multiprocessing -----')
+    with open(reactant_set_path, 'rb') as fr:
         reactant_bag = pickle.load(fr)
-    numb_of_tasks = len(targets)//batch_size
-    if len(targets) % batch_size != 0:
-        numb_of_tasks +=1
-    numb_of_procs = int(numb_cores)
+    #data_format = reactant_data['format']
+    reactant_bag = reactant_bag['data']
+    num_of_tasks = args.num_molecules // batch_size
+    if args.num_molecules % batch_size != 0:
+        num_of_tasks += 1
+    num_of_procs = args.num_cores
+    log(f'  Number of tasks: {num_of_tasks}')
 
     tasks = Queue()
     procs = []
 
     since = time.time()
     # creating tasks
-    for task_idx in range(numb_of_tasks):
-        batch_targets = targets[batch_size*task_idx:batch_size*(task_idx+1)]
-        #args = (batch_targets, depth, uni_templates, bi_templates, task_idx)
-        args = (batch_targets, depth, rxn_templates, task_idx, max_time)
-        tasks.put(args)
+    for task_idx in range(num_of_tasks):
+        batch_targets = targets[args.start_index+batch_size*task_idx:args.start_index+batch_size*(task_idx+1)]
+        retro_args = (batch_targets, args.depth, rxn_templates, task_idx)
+        tasks.put(retro_args)
 
     # creating processes
-    for worker in range(numb_of_procs):
-        p = Process(target = do_retro_analysis, args = (tasks, reactant_bag, exclude_in_R_bag))
+    for worker in range(num_of_procs):
+        p = Process(target = do_retro_analysis, args = (tasks, reactant_bag, args.exclude_in_R_bag, num_of_tasks, args.max_time, log))
         procs.append(p)
         p.start()
-        time.sleep(0.5)
+        time.sleep(0.1)
 
     # completing processes
     for p in procs:
         p.join()
 
-    # 4. join the results
-    print('-----'*4)
-    print('  Retro analysis step finished.\n  Joining the results...')
+    # 3. join the results
+    log(' ---------------------')
+    log('  Retro analysis step finished.', '  Joining the results...')
 
     file0 = f'in_reactant_bag.smi'
-    files1 = [f'positive_set_depth_{current_depth+1}.smi' for current_depth in range(depth)]
-    files2 = [f'positive_set_depth_{current_depth+1}_with_tree.json' for current_depth in range(depth)]
-    file3= f'negative_set_depth_{depth}.smi'
+    files1 = [f'pos{current_depth+1}.smi' for current_depth in range(args.depth)]
+    files2 = [f'pos{current_depth+1}_with_tree.json' for current_depth in range(args.depth)]
+    file3 = f'neg{args.depth}.smi'
+    file4 = 'timed_out.smi'
 
     each_Rbag_result = []
-    for task_idx in range(numb_of_tasks):
-        with open(f'in_reactant_bag_{task_idx}.smi', 'r') as fr:
+    for task_idx in range(num_of_tasks):
+        with open(f'tmp/in_reactant_bag_{task_idx}.smi', 'r') as fr:
             each_Rbag_result.append(fr.read())
     Rbag_result = ''.join(each_Rbag_result)
     numb_of_mols_in_Rbag = Rbag_result.count('\n')
     with open(file0, 'w') as fw:
         fw.write(Rbag_result)
-    for task_idx in range(numb_of_tasks):
-        os.remove(f'in_reactant_bag_{task_idx}.smi')
 
     numb_of_mols_in_each_pos = []
-    for current_depth in range(depth):
+    for current_depth in range(args.depth):
         each_pos_result = []
         each_pos_tree = []
         current_depth +=1
-        for task_idx in range(numb_of_tasks):
-            with open(f'positive_set_depth_{current_depth}_{task_idx}.smi', 'r') as fr:
+        for task_idx in range(num_of_tasks):
+            with open(f'tmp/pos{current_depth}_{task_idx}.smi', 'r') as fr:
                 each_pos_result.append(fr.read())
-            with open(f'positive_set_depth_{current_depth}_{task_idx}_with_tree.json', 'r') as fr:
+            with open(f'tmp/pos{current_depth}_{task_idx}_with_tree.json', 'r') as fr:
                 each_pos_tree += json.load(fr)
 
         pos_result = ''.join(each_pos_result)
@@ -510,43 +532,39 @@ def retrosyntheticAnalyzer(root, common_config, retrosynthetic_analysis_config):
             fw.write(pos_result)
         with open(files2[current_depth-1], 'w') as fw:
             json.dump(each_pos_tree, fw)
-        for task_idx in range(numb_of_tasks):
-            os.remove(f'positive_set_depth_{current_depth}_{task_idx}.smi')
-            os.remove(f'positive_set_depth_{current_depth}_{task_idx}_with_tree.json')
 
     each_neg_result = []
-    for task_idx in range(numb_of_tasks):
-        with open(f'negative_set_depth_{depth}_{task_idx}.smi', 'r') as fr:
+    for task_idx in range(num_of_tasks):
+        with open(f'tmp/neg{args.depth}_{task_idx}.smi', 'r') as fr:
             each_neg_result.append(fr.read())
     neg_result = ''.join(each_neg_result)
     numb_of_mols_in_neg = neg_result.count('\n')
     with open(file3, 'w') as fw:
         fw.write(neg_result)
-    for task_idx in range(numb_of_tasks):
-        os.remove(f'negative_set_depth_{depth}_{task_idx}.smi')
+
+    each_fail_result = []
+    for task_idx in range(num_of_tasks):
+        with open(f'tmp/timed_out_{task_idx}.smi', 'r') as fr:
+            each_fail_result.append(fr.read())
+    fail_result = ''.join(each_fail_result)
+    numb_of_mols_in_fail = fail_result.count('\n')
+    with open(file4, 'w') as fw:
+        fw.write(fail_result)
+
+    shutil.rmtree('tmp')
 
     # save the result
     time_passed = int(time.time()-since)
     now = datetime.now()
     finished_at = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
     
-    result_report = [f'----- Config information -----\n',
-                f'  Retro analysis started at: {since_inform}\n', \
-                f'  Target data path: {retrosynthetic_analysis_config["retro_analysis_target"]}\n',\
-                f'  Target data name: {target_data_name}\n', \
-                f'  Template data: {templates_path}\n', \
-                f'  Start index: {start_index}\n', f'  Reactant_data: {reactant_data}\n',\
-                f'  Augmented reactant bag path: {augmented_reactant_data}\n', f'  Depth: {depth}\n', \
-                f'  Number of target molecules: {numb_molecules}\n', f'  Number of cores: {numb_cores}\n', \
-                f'  Batch size: {batch_size}\n', f'  With path search: {with_path_search}\n', \
-                f'  Max time: {max_time}\n',  f'  Exclude_in_R_bag: {exclude_in_R_bag}\n\n', '----- Generation result -----\n']
-    result_report += [f'  In reactang bag:: {numb_of_mols_in_Rbag}\n']
-    result_report += [f'  Positive set depth_{i+1}: {numb_of_mols_in_each_pos[i]}\n' for i in range(depth)]
-    result_report += [f'  Negative set depth_{depth}: {numb_of_mols_in_neg}\n',\
-            f'\n  finished_at: {finished_at}', \
-            '\n   time passed: [%dh:%dm:%ds]' %(time_passed//3600, (time_passed%3600)//60, time_passed%60)]
-    with open('generation_result.txt', 'w') as fw:
-        fw.writelines(result_report)
-    print('-----'*4)
-    print(f'  Retro analysis finished at:\n  {finished_at}')
-    print('  time passed: [%dh:%dm:%ds]' %(time_passed//3600, (time_passed%3600)//60, time_passed%60))
+    log()
+    log('  ----- Generation result -----',
+        f'  In reactang bag: {numb_of_mols_in_Rbag}')
+    for i in range(args.depth):
+        log(f'  Positive set depth_{i+1}: {numb_of_mols_in_each_pos[i]}')
+    log(f'  Negative set depth_{args.depth}: {numb_of_mols_in_neg}')
+    log(f'  Timed out: {numb_of_mols_in_fail}')
+    log(f'\n  finished_at: {finished_at}')
+    log('  time passed: [%dh:%dm:%ds]' %(time_passed//3600, (time_passed%3600)//60, time_passed%60))
+    return True

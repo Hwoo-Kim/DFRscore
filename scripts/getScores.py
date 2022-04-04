@@ -17,6 +17,23 @@ def rescale_score(score_list:list, m, M, reverse=None) -> list:
 
 
 # 1. SA Score 
+# calculation of synthetic accessibility score as described in:
+#
+# Estimation of Synthetic Accessibility Score of Drug-like Molecules based on Molecular Complexity and Fragment Contributions
+# Peter Ertl and Ansgar Schuffenhauer
+# Journal of Cheminformatics 1:8 (2009)
+# http://www.jcheminf.com/content/1/1/8
+#
+# several small modifications to the original paper are included
+# particularly slightly different formula for marocyclic penalty
+# and taking into account also molecule symmetry (fingerprint density)
+#
+# for a set of 10k diverse molecules the agreement between the original method
+# as implemented in PipelinePilot and this implementation is r2 = 0.97
+#
+# peter ertl & greg landrum, september 2013
+#
+
 def readFragmentScores(name='fpscores'):
     import gzip
     # generate the full path filename:
@@ -107,6 +124,28 @@ def getSAScore(smi:str):
     return score
 
 # 2. SC Score
+#MIT License
+#
+#Copyright (c) 2017 Connor Coley
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+
 def getSCScore(smis:list):
     '''
     SC score scale is [1,5]. Larger the score is, harder synthesis of corresponding molecule is.
@@ -135,6 +174,6 @@ def getSCScore(smis:list):
 if __name__=='__main__':
     smis = ['CC', 'CCCC', 'CCC(=O)O', 'C1CCCCC1', 'c1ccccc1', 'c1ccccc1O']
     print('List of SMILES:\n ', smis)
-    print('SA Score (rescaled in [0,1], larger -> easier):\n ', getSAScore(smis))
-    print('SC Score (rescaled in [0,1], larger -> easier):\n ', getSCScore(smis))
+    print('SA Score:\n ', getSAScore(smis))
+    print('SC Score:\n ', getSCScore(smis))
 

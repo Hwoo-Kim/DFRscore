@@ -5,6 +5,7 @@ import queue
 from tqdm import tqdm
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
+from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 
@@ -14,20 +15,23 @@ def NoStar(s):
 def OneMol(s):
     return s.count('.') == 0
 
-def RemoveSideChemical(s):
-    if s.count('.')>1: return 'more_than_two'
-    s1, s2 = s.split('.')
-    m1, m2 = Mol(s1), Mol(s2)
-    num1, num2 = 0,0
-    if not m1 is None:
-        for a in m1.GetAtoms():
-            if a.GetSymbol()=='C': num1+=1
-    if not m2 is None:
-        for a in m2.GetAtoms():
-            if a.GetSymbol()=='C': num2+=1
-    if num1>num2: return s1
-    elif num1<num2: return s2
-    else: return False
+#def RemoveSideChemical(s):
+#    if s.count('.')>1: return 'more_than_two'
+#    s1, s2 = s.split('.')
+#    m1, m2 = Mol(s1), Mol(s2)
+#    num1, num2 = 0,0
+#    if not m1 is None:
+#        for a in m1.GetAtoms():
+#            if a.GetSymbol()=='C': num1+=1
+#    if not m2 is None:
+#        for a in m2.GetAtoms():
+#            if a.GetSymbol()=='C': num2+=1
+#    if num1>num2: return s1
+#    elif num1<num2: return s2
+#    else: return False
+
+def MolWt(mol):
+    return ExactMolWt(mol) < 250
 
 def do_job(tasks):
     while True:
@@ -42,20 +46,15 @@ def do_job(tasks):
             iterator = smiles
             if ps_numb ==0:
                 iterator = tqdm(smiles, total = len(smiles))
-            more_than_two = 0
             for s in iterator:
                 if not NoStar(s): continue
                 if not OneMol(s):
-                    s = RemoveSideChemical(s)
-                if not s:
-                    continue
-                if s == 'more_than_two':
-                    more_than_two+=1
                     continue
                 try: mol = Mol(s)
                 except:
                     continue
                 if mol is None: continue
+                if not MolWt(mol): continue
                 ms.append(Smiles(mol)+'\n')
             
             if ps_numb == 0:
