@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N Retro_path_test_PubChem
-#PBS -l nodes=gnode2:ppn=4
+#PBS -N Retro_PubChem_not_fin
+#PBS -l nodes=cnode4:ppn=20
 #PBS -l walltime=7:00:00:00
 #PBS -o /home/hwkim/SVS/save/out.out
 #PBS -e /home/hwkim/SVS/save/error.txt
@@ -22,10 +22,12 @@ python retro_analysis.py \
     --reactant data/reactant_bag/emolecules.smi \
     --retro_target $retro_target \
     --depth 4 \
+    --start_index 3999900 \
     --num_cores 20 \
-    --num_molecules 160 \
-    --path True \
-    --max_time 3000
-#    --num_molecules 160
+    --num_molecules 100
+
+#    --max_time 300 \
+#    --num_molecules 100 \
+#    --path True 
 
 date

@@ -15,23 +15,8 @@ def NoStar(s):
 def OneMol(s):
     return s.count('.') == 0
 
-#def RemoveSideChemical(s):
-#    if s.count('.')>1: return 'more_than_two'
-#    s1, s2 = s.split('.')
-#    m1, m2 = Mol(s1), Mol(s2)
-#    num1, num2 = 0,0
-#    if not m1 is None:
-#        for a in m1.GetAtoms():
-#            if a.GetSymbol()=='C': num1+=1
-#    if not m2 is None:
-#        for a in m2.GetAtoms():
-#            if a.GetSymbol()=='C': num2+=1
-#    if num1>num2: return s1
-#    elif num1<num2: return s2
-#    else: return False
-
 def MolWt(mol):
-    return ExactMolWt(mol) < 250
+    return ExactMolWt(mol) < 350
 
 def do_job(tasks):
     while True:

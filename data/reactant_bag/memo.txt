@@ -8,6 +8,13 @@ ZINC_reactants.smi:
 emolecules.smi:
   1. Downloaded 'version.smi.gz' file in '2022-03-01' directory.
   (https://downloads.emolecules.com/free/)    
-  2. Filtered with 'emolecules_filter.py'.
+  2. Filtered with 'emolecules_filter.py'. (remove side chemical)
   3. Converted into canonicalized SMILES.   
     --> <emolecules.smi>
+
+new_emolecules.smi:
+  1. Downloaded 'version.smi.gz' file in '2022-03-01' directory.
+  (https://downloads.emolecules.com/free/)    
+  2. Filtered with 'emolecules_filter.py'. (Mw < 350)
+  3. Converted into canonicalized SMILES.   
+    --> <new_emolecules.smi>

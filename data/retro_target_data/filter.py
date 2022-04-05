@@ -24,7 +24,7 @@ def Stereo(mol):
 def NoStar(s):
     return s.count('*') == 0
 
-def OneMol(s):
+def OneChemical(s):
     return s.count('.') == 0
 
 def Sanitize(mol):
@@ -51,7 +51,7 @@ def do_job(tasks):
             iterator = smiles
             if ps_numb ==0: iterator = tqdm(smiles, total = len(smiles))
             for s in iterator:
-                if not OneMol(s): continue
+                if not OneChemical(s): continue
                 if not NoStar(s): continue
                 try: mol = Mol(s)
                 except: continue

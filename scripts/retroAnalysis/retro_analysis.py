@@ -350,6 +350,8 @@ def retrosyntheticAnalyzer(args):
         rxn_templates.append(temp['retro_smarts'])
 
     with open(os.path.join(args.root, retro_target_path), 'r') as fr:
+        for i in range(args.start_index):
+            fr.readline()
         targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
     batch_size = min(args.batch_size, args.num_molecules//args.num_cores)
     if args.num_molecules % batch_size != 0:
@@ -388,7 +390,7 @@ def retrosyntheticAnalyzer(args):
     since = time.time()
     # creating tasks
     for task_idx in range(num_of_tasks):
-        batch_targets = targets[args.start_index+batch_size*task_idx:args.start_index+batch_size*(task_idx+1)]
+        batch_targets = targets[batch_size*task_idx:batch_size*(task_idx+1)]
         retro_args = (batch_targets, args.depth, rxn_templates, task_idx)
         tasks.put(retro_args)
 
