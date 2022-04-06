@@ -14,10 +14,11 @@ Scoring synthesizability of drug candidates using GAT model
 SVS needs conda environment. After installing [conda](https://www.anaconda.com/),   
 you can manually install the required pakages as follows:
 - rdkit=2020.09.1
+- matplotlib
 - scipy
 - numpy
 - scikit-learn
-- pytorch
+- pytorch>=1.9.0
 
 Or simply you can install the required packages by running
 ```
@@ -66,6 +67,6 @@ python ./test_model.py
 ```
 
 ## Using trained model as a scoring metric for VS
-Useful methods are described in ```SVS``` class in ```scripts/modelScripts/model.py``` 
+Useful functions are described in ```SVS``` class in ```scripts/modelScripts/model.py``` file.
 
 For a fast test, you can simply run ```python getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
