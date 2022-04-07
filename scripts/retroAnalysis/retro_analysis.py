@@ -452,7 +452,7 @@ def retrosyntheticAnalyzer(args):
     
     log()
     log('  ----- Generation result -----',
-        f'  In reactang bag: {numb_of_mols_in_Rbag}')
+        f'  In reactant bag: {numb_of_mols_in_Rbag}')
     for i in range(args.depth):
         log(f'  Positive set depth_{i+1}: {numb_of_mols_in_each_pos[i]}')
     log(f'  Negative set depth_{args.depth}: {numb_of_mols_in_neg}',

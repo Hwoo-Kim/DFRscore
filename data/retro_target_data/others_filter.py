@@ -1,25 +1,14 @@
 import os, sys
-from multiprocessing import Lock, Process, Queue, current_process
+from multiprocessing import Process, Queue
 import queue
 from tqdm import tqdm
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
-#from rdkit.Chem.AllChem import CalcNumRotatableBonds
-#from rdkit.Chem.Descriptors import TPSA
-#from rdkit.Chem.Lipinski import NumHAcceptors, NumHDonors
-from rdkit.Chem.Descriptors import ExactMolWt
-from rdkit.Chem.EnumerateStereoisomers import GetStereoisomerCount
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 import random, time
-
-def MolWt(mol):
-    return ExactMolWt(mol) < 600
-
-def Stereo(mol):
-    return GetStereoisomerCount(mol) == 1       # only molecules all the stereo configuraion are specified.
 
 def NoStar(s):
     return s.count('*') == 0
@@ -56,8 +45,6 @@ def do_job(tasks):
                 try: mol = Mol(s)
                 except: continue
                 if mol == None: continue
-                if not Stereo(mol): continue
-                if not MolWt(mol): continue
                 if not Sanitize(mol): continue
                 if not OrganicSubset(mol): continue
                 ms.append(Smiles(mol)+'\n')
@@ -81,7 +68,6 @@ def joining_files(target_dir:str):
     return True
 
 def main(target_smiles:list, numb_cores:int):
-    number_of_processes = numb_cores
     tasks_to_accomplish = Queue()
     processes = []
     target_len = len(target_smiles)
@@ -100,13 +86,18 @@ def main(target_smiles:list, numb_cores:int):
             break
 
     # creating tasks
-    for task_idx in range(number_of_processes):
-        args = (task_idx, target_smiles[int(target_len*task_idx/numb_cores):int(target_len*(task_idx+1)/numb_cores)], dir_name)
+    batch_size = 10000
+    num_tasks= target_len//batch_size
+    if num_tasks*batch_size != target_len:
+        num_tasks += 1
+    for task_idx in range(num_tasks):
+        args = (task_idx, target_smiles[int(batch_size*task_idx):int(batch_size*(task_idx+1))], dir_name)
         tasks_to_accomplish.put(args)
 
     # creating processes
+    print("Number of tasks (batch_size=10000): %d" %(num_tasks))
     print("I'm creating %d processors..." %(numb_cores))
-    for w in range(number_of_processes):
+    for w in range(numb_cores):
         p = Process(target=do_job, args=(tasks_to_accomplish,))
         processes.append(p)
         p.start()

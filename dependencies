@@ -4,6 +4,9 @@ conda create -y -n SVS python=3.7.11
 source $CONDA_BASE/etc/profile.d/conda.sh
 conda activate SVS
 
+# 0. for plotting
+conda install -y -c conda-forge matplotlib
+
 # 1. for Retro-analysis
 conda install -y -c rdkit rdkit=2020.09.1
 
@@ -12,4 +15,6 @@ conda install -y -c conda-forge scipy
 conda install -y -c conda-forge numpy
 conda install -y -c anaconda scikit-learn
 conda install -y pytorch=1.9.0 cudatoolkit=10.2 -c pytorch
+#conda install -y pytorch=1.11.0 -c pytorch
+#conda install -y cudatoolkit=11.3 -c pytorch
 #conda install -y pytorch -c pytorch
