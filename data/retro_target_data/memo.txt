@@ -8,19 +8,16 @@ All files were filtered by ./pubchem_filter.py or ./others_filter.py
   1,941,410 ->  1,834,098        (using others_filter.py)
 3. ZINC
   https://zinc.docking.org
-  84,188,943 -> 84,073,594       (using others_filter.py)
+  84,188,943 -> 84,073,594 -> 1,000,000  (others_filter.py, randomly sampled.)
 4. MOSES
   https://github.com/molecularsets/moses
   1,760,737 ->  1,760,737        (using others_filter.py)
 5. GDBChEMBL
   https://www.frontiersin.org/articles/10.3389/fchem.2020.00046/full
   9,978,095 ->  9,978,095        (using others_filter.py)
-6. GDBMedChem
-  https://gdb.unibe.ch/downloads/
-  9,994,112 ->         (using others_filter.py)
-7. GGM (using 100,000 scaffolds, 5 generation per scaffold, excluding in train_data)
+6. GGM (using 100,000 scaffolds, 5 generation per scaffold, excluding in train_data)
   https://pubs.rsc.org/en/content/articlelanding/2020/SC/C9SC04503A
   402,527  ->   402,107          (using others_filter.py)
-8. ARAE
+7. ARAE
   https://pubs.acs.org/doi/10.1021/acs.jcim.9b00694
   1,000,000 ->  902,362          (using others_filter.py)

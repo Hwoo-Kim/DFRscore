@@ -312,6 +312,7 @@ def runExp03(predictor,
             except:
                 data = test_data[max_step+1][:each_class_sizes[i]]
                 each_class_sizes[i] = len(data)
+        test_smi_list += data
 
     # 1. result save path setting.
     save_dir = f'{save_dir}_{problem}'
@@ -439,7 +440,7 @@ def runExp03(predictor,
 
         # 2-3. Confusion matrix and evaluate metrics
         logger('\n  ----- BCC Evaluation -----')
-        bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = max_step+1)
+        bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
         logger('  1. Our model(SVS)')
         bin_acc, bin_prec, bin_recall, bin_critical_err = \
                 bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
@@ -472,7 +473,7 @@ def runExp03(predictor,
 
         bin_result_dict = {
                 'bin_acc': bin_acc, 'bin_precision': bin_prec, 'bin_recall': bin_recall,
-                'init_pos_ratio': init_pos_ratio, 'ratio_change (pos:neg)': ratio_change, 'critical_err': critical_err,
+                'init_pos_ratio': init_pos_ratio, 'ratio_change (pos:neg)': ratio_change, 'critical_err': 1-bin_acc,
                 'filtered_out_ratio_pos': filtering_ratio['pos'],'filtered_out_ratio_neg': filtering_ratio['neg'],'filtered_out_ratio_tot': filtering_ratio['tot']
                 }
 
@@ -485,6 +486,6 @@ def runExp03(predictor,
             wr.writerow(mcc_result_dict.keys())
             wr.writerow(mcc_result_dict.values())
         np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
-        np.savetxt(bin_array_file, Max_bin_conf_matrix.conf_matrix, fmt='%.0f')
+        np.savetxt(bin_array_file, bin_conf_matrix.conf_matrix, fmt='%.0f')
 
         return True

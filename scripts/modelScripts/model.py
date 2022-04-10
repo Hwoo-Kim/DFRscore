@@ -46,6 +46,7 @@ class SVS(nn.Module):
             num_heads,
             len_features,
             max_num_atoms,
+            max_step=4,
             problem='regression',
             out_dim=1,
             dropout:float=0
@@ -62,6 +63,7 @@ class SVS(nn.Module):
         self.problem = problem
         self.out_dim = out_dim 
         self.dropout = nn.Dropout(dropout)
+        self.max_step = max_step
 
         self.embedding = nn.Linear(len_features,conv_dim)
         self.GAT_layers=nn.ModuleList(
@@ -90,7 +92,7 @@ class SVS(nn.Module):
         for layer in self.GAT_layers:
             x = layer(x, A)         # output was already applied with ELU.
             x = self.dropout(x)
-        x = retval = x.mean(1)
+        x = x.mean(1)
         for idx, layer in enumerate(self.fc_layers):
             x = layer(x)
             x = self.relu(x)
@@ -111,6 +113,8 @@ class SVS(nn.Module):
     def mol_to_graph_feature(self, mol):
         sssr = Chem.GetSymmSSSR(mol)
         num_atoms = mol.GetNumAtoms()
+        if num_atoms > self.max_num_atoms:
+            return None, None
         adj = GetAdjacencyMatrix(mol) + np.eye(num_atoms)
         padded_adj = np.zeros((self.max_num_atoms, self.max_num_atoms))
         padded_adj[:num_atoms,:num_atoms] = adj
@@ -140,11 +144,15 @@ class SVS(nn.Module):
         for mol in mol_list:
             if mol:
                 padded_feature, padded_adj = self.mol_to_graph_feature(mol)
+                if padded_feature is None:
+                    padded_features.append(torch.tensor(float('nan')).repeat([self.max_num_atoms, self.len_features]))
+                    padded_adjs.append(torch.tensor(float('nan')).repeat([self.max_num_atoms, self.max_num_atoms]))
+                    continue
                 padded_features.append(padded_feature)
                 padded_adjs.append(padded_adj)
             else:
-                padded_features.append(torch.nan)
-                padded_adjs.append(torch.nan)
+                padded_features.append(torch.tensor(float('nan')).repeat([self.max_num_atoms, self.len_features]))
+                padded_adjs.append(torch.tensor(float('nan')).repeat([self.max_num_atoms, self.max_num_atoms]))
         padded_features = torch.stack(padded_features,dim=0)
         padded_adjs = torch.stack(padded_adjs,dim=0)
 
@@ -204,7 +212,9 @@ class SVS(nn.Module):
             A = batch['adj'].float().to(self.device)
             scores.append(self.forward(x,A).to('cpu').detach())
         if self.problem == 'regression':
-            return torch.cat(scores).squeeze(-1).numpy()
+            scores = torch.cat(scores).squeeze(-1)
+            scores = torch.where(scores.isnan(), torch.tensor(float(self.max_step+1)), scores)
+            return scores.numpy()
         else:
             probs = self.softmax(torch.cat(scores)).numpy()
             if get_probs:

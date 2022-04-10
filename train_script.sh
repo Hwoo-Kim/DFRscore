@@ -2,7 +2,7 @@
 
 #PBS -N nConv6_nfc4_convdim256_fcdim128
 #PBS -l nodes=gnode2:ppn=4:gpu
-#PBS -l walltime=5:00:00 
+#PBS -l walltime=7:00:00:00 
 
 ##### Run ##### 
 date

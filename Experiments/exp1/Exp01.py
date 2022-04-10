@@ -37,6 +37,7 @@ if regression_model_path:
                 num_heads=8,
                 len_features=36,
                 max_num_atoms=64,
+                max_step=4,
                 problem='regression'
                 )
     predictor.restore(regression_model_path)
@@ -64,6 +65,7 @@ if classification_model_path:
                 num_heads=8,
                 len_features=36,
                 max_num_atoms=64,
+                max_step=4,
                 problem='classification',
                 out_dim=max_step+1
                 )
