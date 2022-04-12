@@ -1,4 +1,4 @@
-import os, pickle
+import os, pickle, sys
 import time
 
 import torch
@@ -12,18 +12,19 @@ from rdkit import Chem
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 #from rdkit.Chem.rdmolops import GetFormalCharge
 
-from scripts.modelScripts.layers import GraphAttentionLayer
-from scripts.modelScripts.preprocessing import get_atoms_feature, sssr_to_ring_feature
-from scripts.modelScripts.data import InferenceDataset
+sys.path.append(f'{os.path.abspath(os.path.dirname(__file__))}')
+from layers import GraphAttentionLayer
+from preprocessing import get_atoms_feature, sssr_to_ring_feature
+from data import InferenceDataset
 
-#MAX_NUM_ATOM = 64
-#CONV_DIM = 256
-#FC_DIM = 128
-#NUM_GAT_LAYER = 6
-#NUM_FC_LAYER = 4
-#NUM_HEADS= 8
-#OUT_DIM= 5
-#LEN_FEATURES = 36
+CONV_DIM = 256
+FC_DIM = 128
+NUM_GAT_LAYER = 6
+NUM_FC_LAYER = 3
+NUM_HEADS= 8
+LEN_FEATURES = 36
+MAX_NUM_ATOM = 64
+MAX_STEP = 4
 
 class SVS(nn.Module):
     """
@@ -37,22 +38,20 @@ class SVS(nn.Module):
       2-2) From RDKit Molecule object:
         score = model.molToScore(<Molecule object>) / scores = model.molListToScores(<list of Molecule objects>)
     """
+    global CONV_DIM, FC_DIM, NUM_GAT_LAYER, NUM_FC_LAYER, NUM_HEADS, LEN_FEATURES, MAX_NUM_ATOM, MAX_STEP
     def __init__(
             self,
-            conv_dim,
-            fc_dim,
-            n_GAT_layer,
-            n_fc_layer,
-            num_heads,
-            len_features,
-            max_num_atoms,
-            max_step=4,
-            problem='regression',
-            out_dim=1,
+            conv_dim=CONV_DIM,
+            fc_dim=FC_DIM,
+            n_GAT_layer=NUM_GAT_LAYER,
+            n_fc_layer=NUM_FC_LAYER,
+            num_heads=NUM_HEADS,
+            len_features=LEN_FEATURES,
+            max_num_atoms=MAX_NUM_ATOM,
+            max_step=MAX_STEP,
             dropout:float=0
             ):
         super().__init__()
-        assert problem in ['regression', 'classification']
         self.conv_dim = conv_dim
         self.fc_dim = fc_dim
         self.n_GAT_layer = n_GAT_layer
@@ -60,8 +59,7 @@ class SVS(nn.Module):
         self.num_heads = num_heads
         self.len_features = len_features
         self.max_num_atoms = max_num_atoms
-        self.problem = problem
-        self.out_dim = out_dim 
+        self.out_dim = 1
         self.dropout = nn.Dropout(dropout)
         self.max_step = max_step
 
@@ -78,8 +76,6 @@ class SVS(nn.Module):
         self.fc_layers=nn.ModuleList([nn.Linear(conv_dim,fc_dim)])
         for i in range(n_fc_layer-2):
             self.fc_layers.append(nn.Linear(fc_dim,fc_dim))
-        if self.problem=='regression':
-            self.out_dim = 1
         self.pred_layer = nn.Linear(fc_dim, self.out_dim)
         self.relu = nn.ReLU()
         self.elu = nn.ELU()
@@ -98,8 +94,7 @@ class SVS(nn.Module):
             x = self.relu(x)
             x = self.dropout(x)
         retval = self.pred_layer(x)
-        if self.problem=='regression':
-            retval = self.elu(retval).squeeze(-1)+1.5
+        retval = self.elu(retval).squeeze(-1)+1.5
         return retval
 
     def restore(self, path_to_model):
@@ -158,7 +153,7 @@ class SVS(nn.Module):
 
         return padded_features, padded_adjs
 
-    def smiToScore(self, smi:str, get_probs=False) -> tuple:
+    def smiToScore(self, smi:str) -> torch.tensor:
         assert isinstance(smi, str), 'input of smiToScore method must be a string of SMILES.'
         try:
             mol = Chem.MolFromSmiles(smi)
@@ -166,42 +161,28 @@ class SVS(nn.Module):
             raise AssertionError('input of smiToScore method must be a string of SMILES.')
         if not mol:
             raise AssertionError('Failed to generate rdchem.Mol object from given string.')
-        return self.molToScore(mol, get_probs)
+        return self.molToScore(mol)
 
-    def molToScore(self, mol:object, get_probs=False):
+    def molToScore(self, mol:object):
         assert isinstance(mol, rdkit.Chem.rdchem.Mol), \
             'input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol.'
-        assert not (self.problem=='regression' and get_probs), \
-            'Cannot get probabilites for Regression problem.'
         feature, adj = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
         adj= adj.float().unsqueeze(0).to(self.device)
-        if self.problem == 'regression':
-            return self.forward(feature, adj).to('cpu').detach().numpy()[0]
-        else:
-            probs = self.softmax(self.forward(feature, adj)).to('cpu').detach().numpy()[0]
-            if get_probs:
-                retval = np.round_(probs, decimals=4)
-            else:
-                labels = np.array(range(self.out_dim))
-                labels[0] = self.out_dim
-                retval = np.sum(np.multiply(probs, labels),axis=0)
-                retval = np.round_(retval, decimals=4)
-            return retval
+        score = self.forward(feature, adj).to('cpu').detach().numpy()
+        return torch.where(score.isnan(), torch.tensor(float(self.max_stpe+1)), score)
 
-    def smiListToScores(self, smi_list, batch_size=256, get_probs=False):
+    def smiListToScores(self, smi_list, batch_size=256):
         mol_list = []
         for smi in smi_list:
             try:
                 mol_list.append(Chem.MolFromSmiles(smi)) 
             except:
                 mol_list.append(None)
-        return self.molListToScores(mol_list, batch_size, get_probs)
+        return self.molListToScores(mol_list, batch_size)
 
-    def molListToScores(self, mol_list, batch_size=256, get_probs=False):
+    def molListToScores(self, mol_list, batch_size=256):
         # TODO: 너무 크다 싶으면 10000개 씩 잘라서 하는 등 활용 가능.
-        assert not (self.problem=='regression' and get_probs), \
-            'Cannot get probabilites for Regression problem.'
         padded_features, padded_adjs = self.mols_to_graph_feature(mol_list)
         data_set = InferenceDataset(features=padded_features, adjs=padded_adjs)
         data_loader = DataLoader(data_set, batch_size = batch_size, shuffle=False)
@@ -211,20 +192,9 @@ class SVS(nn.Module):
             x = batch['feature'].float().to(self.device)
             A = batch['adj'].float().to(self.device)
             scores.append(self.forward(x,A).to('cpu').detach())
-        if self.problem == 'regression':
-            scores = torch.cat(scores).squeeze(-1)
-            scores = torch.where(scores.isnan(), torch.tensor(float(self.max_step+1)), scores)
-            return scores.numpy()
-        else:
-            probs = self.softmax(torch.cat(scores)).numpy()
-            if get_probs:
-                retval = np.round_(probs, decimals=4)
-            else:
-                labels = np.array(range(self.out_dim))
-                labels[0] = self.out_dim
-                retval = np.sum(np.multiply(probs, labels),axis=1)
-                retval = np.round_(retval, decimals=4)
-            return retval
+        scores = torch.cat(scores).squeeze(-1)
+        scores = torch.where(scores.isnan(), torch.tensor(float(self.max_step+1)), scores)
+        return scores.numpy()
 
     def cuda(self):
         _SVS = super().cuda()

@@ -14,6 +14,20 @@ def main_train(args):
     args.logger(f'Model training save directory is:\n  {args.save_dir}')
     
     # 1. Training data preprocessing
+    now = datetime.now()
+    since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
+    preprocess_dir = os.path.join(args.data_dir, args.data_preprocessing)
+    args.preprocess_dir = preprocess_dir
+    if os.path.exists(preprocess_dir):
+        print('1. Data preprocessing phase')
+        print('  Processed data already exists.')
+        print('  Training data preprocessing finished.')
+    else:
+        os.mkdir(preprocess_dir)
+        args.preprocess_logger = logger(os.path.join(preprocess_dir, 'preprocessing.log'))
+        args.preprocess_logger('1. Data preprocessing phase')
+        args.preprocess_logger(f'  Started at: {since_inform}')
+        args.preprocess_logger(f'  Data will be generated in: {preprocess_dir}')
     args.data_dir = train_data_preprocess(args=args)
 
     # 2. model train

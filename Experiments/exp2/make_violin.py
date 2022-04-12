@@ -1,86 +1,50 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import sys, os
+import pickle
 
-def make_frequency_table(datalist, n=None, start=None, end=None, norm=True):
-    """function for construct frequency table of data"""
-    if start == None :
-        start = min(datalist)//1
-    if end == None :
-        end = max(datalist)//1+1
-    if n == None :
-        width = 1
-    else :
-        width = (end-start)/n
+# 1. Reading result file
+target_data = sys.argv[1]
+if target_data[-1] == '/':
+    target_data = target_data[:-1]
+path_to_experiments = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+test_file_path = f'{path_to_experiments}/exp1/{target_data}/scores.pkl'
+with open(test_file_path, 'rb') as f:
+    data_dict = pickle.load(f)
 
-    x = [start + width*(i+0.5) for i in range(-1, n+1)]
-
-    y = [0 for i in range(n+2)] # y[0] and y[-1] are padding. (The value of them should be 0.)
-
-    for data in datalist :
-        if start <= data < end :
-            y[int((data-start)/width) + 1] += 1
-
-    if norm :
-        #To represent frequency table to distribution graph, we should normalize the table.
-        norm_constant = width*sum(y)
-        #return np.array(x), np.array(y)/norm_constant
-        return np.array(x),np.array(y)
-    return np.array(x),np.array(y)
-    #return np.array(x), np.array(y)
-
-data_set = ''
-
-f = open('expected_value.txt')
-lines = f.readlines()
-
-data_list = {'1':[],'2':[],'3':[],'4':[]}
-
-for line in lines:
-    words = line.strip().split(' ')
-    label = float(words[1])+1
-    label = int(label)
-    idx = int(words[3])
-    if label>4 or idx > 3:
-        continue
-    label = str(label)
-    value = float(words[2])
-    value = round(value,3)
-    data_list[label].append(value)
-
-f.close()
-
-
-n = len(data_set)
-
+# 2. Plot setting
 plot_list = ['1','2','3','4']
 color_list = [np.array([50,50,50]),np.array([100,100,233]),np.array([200,128,50]),np.array([230,30,30])]
 for i in range(len(color_list)):
     color_list[i] = color_list[i]/255
-print (color_list)
-#plot_list = ['chembl','investigation','fda']
-#color_list = ['orange','purple','red']
 
-data_plot = []
+metrics = ['svs', 'sa', 'sc']
+metric_name_dict = {'svs': 'ENSS', 'sa': 'SAscore', 'sc': 'SCScore'}
+#plt.figure(figsize=[16,5])
+plt.figure(figsize=[6.4,4.8])
+for metric_idx, metric in enumerate(['svs', 'sa', 'sc']):
+    data_plot = []
+    data = data_dict[metric]
+    ax=plt.subplot(1, 1, metric_idx+1)
+    ax.set_xlabel('True label', fontsize=15)
+    ax.set_ylabel('Pred label', fontsize=15)
+    #ax.set_title(metric_name_dict[metric])
+    ax.set_title(target_data, fontsize=25)
+    ax.tick_params(axis='x', labelsize=12)
+    ax.tick_params(axis='y', labelsize=12)
+    for label in plot_list:
+        data_plot.append(data[label])
+    
+    positions = list(range(1,len(plot_list)+1))
+    figure_plot = plt.violinplot(data_plot,positions = positions,showextrema = True,points=50)
+    for idx in range(len(color_list)):
+        violin = figure_plot['bodies'][idx]
+        violin.set_facecolor(color_list[idx])
+        violin.set_edgecolor('black')
+        violin.set_alpha(1)
+        bar = figure_plot['cbars']
+        bar.set_color([0,0,0])
+    break
 
-positions = list(range(1,len(plot_list)+1))
-
-y_min = 1
-y_max = 4
-
-fig = plt.figure()
-position_list = None
-for name in plot_list:
-    y = data_list[name]
-    data_plot.append(y)
-
-figure_plot = plt.violinplot(data_plot,positions = positions,showextrema = True,points=50)
-n = len(color_list)
-for i in range(n):
-    violin = figure_plot['bodies'][i]
-    violin.set_facecolor(color_list[i])
-    violin.set_edgecolor('black')
-    violin.set_alpha(1)
-    bar = figure_plot['cbars']
-    bar.set_color([0,0,0])
-
-plt.show()
+#plt.savefig(f'{target_data}.png', format='png')
+plt.savefig(f'{target_data}_only_ENSS.png', format='png')

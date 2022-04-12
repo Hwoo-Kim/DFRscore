@@ -43,7 +43,7 @@ class BinaryConfusionMatrix(ConfMatrix):
     def get_accuracy(self):                         # for computing critical error. not explicit use.
         return round(float(self.get_numb_correct()/self.get_numb_data()),3)
 
-    def get_precision(self):             # for EXP01 and EXP03.
+    def get_precision(self):
         return round(float(self.get_class_precision(col_idx=self.pos_label)),3)
 
     def get_recall(self):
@@ -53,7 +53,7 @@ class BinaryConfusionMatrix(ConfMatrix):
         prec, recall = self.get_precision(self.pos_label), self.get_recall(self.pos_label)
         return round(float(2/((1/prec)+(1/recall))),3)
 
-    def get_critical_error(self):                   # for EXP01 and EXP03.
+    def get_critical_error(self):
         return round(float(1-self.get_accuracy()),3)
 
     def get_initial_pos_ratio(self):     # for EXP03.
@@ -94,13 +94,6 @@ def get_AUROC(y_true, y_score):
     return round(roc_auc_score(y_true, y_score),3)
 
 if __name__=='__main__':
-    #true_list = np.concatenate([np.zeros(3), np.ones(5), np.ones(6)*2])
-    #pred_list = np.concatenate([np.zeros(4), np.ones(3), np.ones(7)*2])
-    #conf_matrix = UnbalMultiConfusionMatrix(true_list, pred_list, numb_classes=3)
-    #mcc_acc, macro_avg_precision, macro_avg_f1_score = \
-    #    conf_matrix.get_accuracy(), conf_matrix.get_macro_avg_precision(), conf_matrix.get_macro_avg_f1_score()
-    #print(mcc_acc, macro_avg_precision, macro_avg_f1_score)
-
     true_list = np.concatenate([np.zeros(4),np.ones(4)])
     prob_list = np.array([0.1,0.2,0.3,0.4,0.7,0.8,0.2,1.0])
     prob2_list = prob_list[::-1]

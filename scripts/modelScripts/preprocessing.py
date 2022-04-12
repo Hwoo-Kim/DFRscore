@@ -1,17 +1,12 @@
 from rdkit import Chem
 from rdkit.Chem import MolFromSmiles as Mol
-from rdkit.Chem.rdchem import ChiralType
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
-from rdkit.Chem.rdmolops import GetFormalCharge
 from multiprocessing import Queue, Process,current_process
-from scripts.utils import logger
-from sklearn.model_selection import train_test_split
 import numpy as np
 import queue
 import torch
 import pickle
 import os
-import multiprocessing
 import random
 import time
 from datetime import datetime
@@ -92,8 +87,6 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
         train,val,test = v[:int(len(v)*ratio[0])], \
                 v[int(len(v)*ratio[0]):int(len(v)*(ratio[0]+ratio[1]))], \
                 v[int(len(v)*(ratio[0]+ratio[1])):]
-        #train, val_test = train_test_split(v, train_size=float(ratio[0])) 
-        #val, test= train_test_split(val_test, train_size=float(ratio[1]/np.sum(ratio[1:])))
         train_key_dicts += train
         val_key_dicts += val
         test_key_dicts += test
@@ -138,44 +131,6 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
 
     return True
 
-"""
-# 1-2. For evalution model
-def label_data(data_dir,save_dir,each_class_size,max_step):
-    results = []
-    for i in range(max_step+1):
-        #each_class = []
-        label = float(i)
-        #label = i
-        if i == 0:
-            with open(f'{data_dir}/neg{max_step}.smi', 'r') as fr:
-               smis = fr.read().splitlines()
-        else:
-            with open(f'{data_dir}/pos{i}.smi', 'r') as fr:
-                smis = fr.read().splitlines()
-        information = [f'{smi}\t{label}\n' for smi in smis]
-        each_class = information[:each_class_size]
-        #for j in range(each_class_size):
-        #    each_class.append(f'{smis[j]}\t{label}\n')
-        #for smi in smis:
-        #    each_class.append(f'{smi}\t{label}\n')
-        results.append(each_class)
-    print(f'Num data for each class (Neg, pos1, pos2, ...):')
-    for i in range(max_step+1):
-        print(len(results[i]), end='\t')
-    to_write=[]
-    for each_class in results:
-        to_write+=each_class
-    with open(f'{save_dir}/labeled_data.txt','w') as fw:
-        fw.writelines(to_write)
-    return results
-
-# 1-3. For inferencing
-def read_data(data_path):
-    with open(data_path, 'r') as fr:
-        smis = fr.read().splitlines()
-    print(f'Num data for inference: {len(smis)}')
-    return smis
-"""
 
 # 2. Graph feature generating functions
 def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
@@ -262,30 +217,15 @@ def get_atoms_feature(atom):
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    #one_of_k_encoding(atom.GetChiralTag(), [ChiralType(0), ChiralType(1), ChiralType(2),'ELSE'])+
                     [atom.GetIsAromatic()])
                     # 11+6+6+6+1 = 30
-                    # 11+6+6+4+1 = 28
 
 # 3. Main functions
 def train_data_preprocess(args):
     # 1. Reading data
-    preprocess_dir = os.path.join(args.data_dir, args.data_preprocessing)
     since = time.time()
-    now = datetime.now()
-    since_inform = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
-    if os.path.exists(preprocess_dir):
-        print('1. Data preprocessing phase')
-        print('  Processed data already exists.')
-        print('  Training data preprocessing finished.')
-        return preprocess_dir
-    else:
-        os.mkdir(preprocess_dir)
-        log = logger(os.path.join(preprocess_dir, 'preprocessing.log'))
-        log('1. Data preprocessing phase')
-        log(f'  Started at: {since_inform}')
-        log(f'  Data will be generated in: {preprocess_dir}')
-
+    preprocess_dir = args.preprocess_dir
+    log = args.preprocess_logger
     global PROBLEM
     PROBLEM = args.problem
 
@@ -332,48 +272,4 @@ def train_data_preprocess(args):
     log('  Done.')
     log(f'  Elapsed time: {time.time()-since}\n')
     return preprocess_dir
-
-"""
-def GAT_evaluation_data_generation(data_dir, save_dir, evaluation_args):
-    # 1. Reading data
-    each_class_size = evaluation_args.each_class_size
-    max_num_atoms = evaluation_args.max_num_atoms
-    len_features = evaluation_args.len_features
-    max_step = evaluation_args.max_step
-    working_dir = utils.working_dir_setting(save_dir,'inference_data')     # not move
-    logger = utils.logger(f'{working_dir}/data_generation.log')
-    datas=label_data(data_dir, working_dir,each_class_size, max_step, logger)        # lists of (smi,label)
-    logger('Done.')
-
-    # 2. Feature generation
-    logger(f'making tensors ...',end='')
-    for i in range(max_step+1):
-        if i == 0:
-            save_path = f'{working_dir}/infer_neg{max_step}'
-        else:
-            save_path = f'{working_dir}/infer_pos{i}'
-        get_graph_feature(datas[i],save_path,max_num_atoms,len_features)
-    logger('\tDone.')
-
-    return working_dir
-
-def GAT_inference_data_generation(data_path, save_dir, inference_args):
-    # 1. Reading data
-    max_num_atoms = inference_args.max_num_atoms
-    len_features = inference_args.len_features
-    max_step = inference_args.max_step
-    working_dir = utils.working_dir_setting(save_dir,'inference_data')     # not move
-    logger = utils.logger(f'{working_dir}/data_generation.log')
-    data=read_data(data_path)
-    logger('Done.')
-
-    # 2. Feature generation
-    logger(f'making tensors ...', end='')
-    save_path = f'{working_dir}/for_inference'
-    get_graph_feature(data,save_path,max_num_atoms,len_features, for_inference=True)
-    logger('\tDone.')
-
-    return working_dir
-"""
-
 

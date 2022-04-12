@@ -1,23 +1,23 @@
-All files were filtered by ./pubchem_filter.py or ./others_filter.py 
+All files were filtered. 
 
 1. PubChem (randomly selected 20,000,000 molecules from original file)
   https://pubchem.ncbi.nlm.nih.gov
   20,000,000 -> 10,684,200       (using pubchem_filter.py)
 2. ChEMBL
   https://www.ebi.ac.uk/chembl/
-  1,941,410 ->  1,834,098        (using others_filter.py)
+  1,941,410 ->  1,685,504        (using exp01_filter.py)
 3. ZINC
   https://zinc.docking.org
-  84,188,943 -> 84,073,594 -> 1,000,000  (others_filter.py, randomly sampled.)
+  84,188,943 -> 2,000,000 -> 1,995,540  (randomly sampled, followed by exp01_filter.py)
 4. MOSES
   https://github.com/molecularsets/moses
-  1,760,737 ->  1,760,737        (using others_filter.py)
+  1,760,737 ->  1,760,737        (using exp01_filter.py)
 5. GDBChEMBL
   https://www.frontiersin.org/articles/10.3389/fchem.2020.00046/full
-  9,978,095 ->  9,978,095        (using others_filter.py)
+  9,978,095 ->  9,978,095        (using exp03_filter.py)
 6. GGM (using 100,000 scaffolds, 5 generation per scaffold, excluding in train_data)
   https://pubs.rsc.org/en/content/articlelanding/2020/SC/C9SC04503A
-  402,527  ->   402,107          (using others_filter.py)
+  402,527  ->   402,107          (using exp03_filter.py)
 7. ARAE
   https://pubs.acs.org/doi/10.1021/acs.jcim.9b00694
-  1,000,000 ->  902,362          (using others_filter.py)
+  1,000,000 ->  902,362          (using exp03_filter.py)
