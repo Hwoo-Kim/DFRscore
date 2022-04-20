@@ -95,50 +95,12 @@ def onestep_by_reactions(target_in_mol, rxn_objs):
                 result.append(to_add)
     return duplicate_remove(result)
 
-def first_batch_reaction(targets_in_smiles, targets_in_mol, rxn_objs):
-    dict_of_results = dict()
-    for idx, target_in_mol in enumerate(targets_in_mol):
-        if target_in_mol == None:
-            continue
-        target_result = onestep_by_reactions(target_in_mol, rxn_objs)
-        if target_result != []:
-            dict_of_results[targets_in_smiles[idx]] = target_result
-    return dict_of_results
-
 def first_reaction(target_in_mol, rxn_objs):
     if target_in_mol == None:
         return []
     rxn_result = onestep_by_reactions(target_in_mol, rxn_objs)
     return rxn_result
         
-def further_batch_reaction(reaction_result, rxn_objs):
-    to_del = []
-    for target, retro_lists in reaction_result.items():
-        new_retro_results = []
-        for retro_list in retro_lists:
-            for intermediate in retro_list:
-                try:
-                    intermediate_in_mol = Mol(intermediate)
-                except:
-                    break
-                if intermediate_in_mol == None:
-                    break
-                results = onestep_by_reactions(intermediate_in_mol, rxn_objs)
-                if results == []:
-                    continue
-                else:
-                    idx = retro_list.index(intermediate)
-                    others = retro_list[:idx] + retro_list[idx+1:]
-                    for pair in results:
-                        new_retro_results.append(pair+others)
-        if new_retro_results==[]:
-            to_del.append(target)
-            continue
-        reaction_result[target] = new_retro_results
-    for smi in to_del:
-        del reaction_result[smi]
-    return reaction_result
-
 def further_reaction(retro_result, rxn_objs):
     to_del = []
     new_retro_results = []
@@ -173,76 +135,7 @@ def initial_R_bag_check(targets_in_mol:list, reactant_bag:set):
             otherwise_mol.append(targets_in_mol[idx])
     return in_R_bag_smi, in_R_bag_mol, otherwise_smi, otherwise_mol
 
-def R_bag_check(batch_reaction_result:list, reactant_bag:set, current_depth:int, target_depth:int):
-    '''
-    This has two functions.
-      1) Termination condition. Check if all the precursors are in reactant_bag or not.
-      2) Filtering purpose. Check the retro_result exceeded the limit or not.
-    Returns:
-      positives: 
-      batch_reaction_result: 
-    '''
-    positives = []
-    diff = target_depth-current_depth
-    if diff >0:
-        for target, precursor_pairs in batch_reaction_result.items():
-            to_del = []
-            for pair_idx, pair in enumerate(precursor_pairs):
-                exit = False
-                temp_idx, to_be_checked, others = pair[0], pair[1], pair[2:]
-                limit_numb = diff - len(others)
-                precursor_R_bag_check = []
-
-                for smi in to_be_checked:
-                    check = smi in reactant_bag
-                    precursor_R_bag_check.append(check)
-                    if precursor_R_bag_check.count(False) > limit_numb:
-                        to_del.append(pair)
-                        exit = True
-                        break
-                    else:
-                        continue
-                if exit:
-                    continue
-                if precursor_R_bag_check.count(True) == len(to_be_checked) and len(others) == 0:
-                    positives.append(target)
-                    break
-                indices = list_duplicates_of(precursor_R_bag_check, False)
-                precursor_pairs[pair_idx] = [to_be_checked[idx] for idx in indices]+others
-                continue
-            for pair in to_del:
-                precursor_pairs.remove(pair)
-
-        for smi in positives:
-            del batch_reaction_result[smi]
-        return positives, batch_reaction_result
-
-    elif diff ==0:
-        for target, precursor_pairs in batch_reaction_result.items():
-            for pair_idx, pair in enumerate(precursor_pairs):
-                temp_idx, to_be_checked, others = pair[0], pair[1], pair[2:]
-                if len(others) != 0:
-                    continue
-                precursor_R_bag_check = []
-
-                for smi in to_be_checked:
-                    check = smi in reactant_bag
-                    if not check:
-                        break
-                    else:
-                        precursor_R_bag_check.append(check)
-                        continue
-
-                if precursor_R_bag_check.count(True) == len(to_be_checked):
-                    positives.append(target)
-                    break
-                    
-                else:
-                    continue
-
-        return positives, None
-
-def R_bag_check2(reaction_result:list, reactant_bag:set, current_depth:int, target_depth:int):
+def R_bag_check(reaction_result:list, reactant_bag:set, current_depth:int, target_depth:int):
     '''
     This has two functions.
       1) Termination condition. Check if all the precursors are in reactant_bag or not.
@@ -303,84 +196,7 @@ def R_bag_check2(reaction_result:list, reactant_bag:set, current_depth:int, targ
 
         return None, None
 
-def retrosynthetic_analysis_single_batch(
-        targets_in_smiles:list,
-        reactant_bag:set,
-        depth:int,
-        rxn_templates:list,
-        task_idx:int,
-        exclude_in_R_bag:bool
-        ):
-    '''
-    This code conducts retro-analysis recursively.
-      e.g., depth=1 reult --> depth=2 result --> depth=3 result --> ...
-    Args:
-      targets_in_smiles: list of target SMILES.
-      reactant_bag: set of reactants in SMILES. inchikey version deprecated.
-      depth: the depth determining how many steps to use in retro-analysis in maximum.
-      rxn_templates: list of reaction SMARTS.
-      task_idx: task idx in the multiprocessing.
-      exclude_in_R_bag: whether excluding target molecule if the molecule is in reactant bag.
-    Returns:
-      True 
-    '''
-    rxn_objects = []
-    for rxn in rxn_templates:
-        try:
-            rxn_objects.append(Rxn(rxn))
-        except:
-            rxn_objects.append(None)
-    targets_in_mol = [Mol(target) for target in targets_in_smiles]
-    positives_dict= dict()
-
-    # 0. In R_bag check
-    in_R_bag_smi, in_R_bag_mol, otherwise_smi, otherwise_mol = initial_R_bag_check(targets_in_mol, reactant_bag)
-    with open(f'tmp/in_reactant_bag_{task_idx}.smi', 'w') as fw:
-        to_write = [smi + '\n' for smi in in_R_bag_smi]
-        fw.writelines(to_write)
-    if exclude_in_R_bag:
-        targets_in_smiles = otherwise_smi
-        targets_in_mol = otherwise_mol
-
-    # 1. depth = 1 operation
-    reaction_result = first_batch_reaction(targets_in_smiles, targets_in_mol, rxn_objects)
-    positive_each_depth, curated_reaction_result= R_bag_check(reaction_result, reactant_bag, 1, depth)
-    positives_dict[1] = positive_each_depth
-    if depth == 1:
-        negative_set = list(set(targets_in_smiles)-set(positives_dict[1]))
-        with open(f'tmp/pos1_{task_idx}.smi', 'w') as fw:
-            to_write = [smi + '\n' for smi in positives_dict[1]]
-            fw.writelines(to_write)
-        with open(f'tmp/neg{depth}_{task_idx}.smi', 'w') as fw:
-            to_write = [smi + '\n' for smi in negative_set]
-            fw.writelines(to_write)
-        return True
-
-    # 2. depth more than 1 operation
-    for current_depth in range(2,depth+1):
-        if current_depth != depth:
-            reaction_result = further_batch_reaction(curated_reaction_result, rxn_objects)
-            positive_each_depth, curated_reaction_result= R_bag_check(reaction_result, reactant_bag, current_depth, depth)
-            positives_dict[current_depth] = positive_each_depth
-            continue
-        else:
-            reaction_result = further_batch_reaction(curated_reaction_result, rxn_objects)
-            positive_each_depth, _ = R_bag_check(reaction_result, reactant_bag, current_depth, depth)
-            positives_dict[current_depth] = positive_each_depth
-            break
-    # result report
-    negative_set = set(targets_in_smiles)
-    for current_depth in range(1,depth+1):
-        negative_set = negative_set-set(positives_dict[current_depth])
-        with open(f'tmp/pos{current_depth}_{task_idx}.smi', 'w') as fw:
-            to_write = [smi + '\n' for smi in positives_dict[current_depth]]
-            fw.writelines(to_write)
-    with open(f'tmp/neg{depth}_{task_idx}.smi', 'w') as fw:
-        to_write = [smi + '\n' for smi in negative_set]
-        fw.writelines(to_write)
-    return True
-
-def retrosynthetic_analysis_single_batch2(
+def retro_analysis_single_batch(
         targets_in_smiles:list,
         reactant_bag:set,
         depth:int,
@@ -409,7 +225,7 @@ def retrosynthetic_analysis_single_batch2(
         reaction_result = first_reaction(target_in_mol, rxn_objects)
         if reaction_result == []:
             return 'Neg'
-        label, filtered_reaction_result= R_bag_check2(reaction_result, reactant_bag, 1, depth)
+        label, filtered_reaction_result= R_bag_check(reaction_result, reactant_bag, 1, depth)
         if not label is None:
             return label
 
@@ -418,7 +234,7 @@ def retrosynthetic_analysis_single_batch2(
             reaction_result = further_reaction(filtered_reaction_result, rxn_objects)
             if reaction_result == []:
                 return 'Neg'
-            label, filtered_reaction_result= R_bag_check2(reaction_result, reactant_bag, current_depth, depth)
+            label, filtered_reaction_result= R_bag_check(reaction_result, reactant_bag, current_depth, depth)
             if not label is None:
                 return label
         return 'Neg'
@@ -474,8 +290,7 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, max_time
             break
         else:
             targets, depth, rxn_templates, task_idx = args
-            retrosynthetic_analysis_single_batch(targets, reactant_bag, depth, rxn_templates, task_idx, exclude_in_R_bag)
-            #retrosynthetic_analysis_single_batch2(targets, reactant_bag, depth, rxn_templates, task_idx, exclude_in_R_bag, max_time)
+            retro_analysis_single_batch(targets, reactant_bag, depth, rxn_templates, task_idx, exclude_in_R_bag, max_time)
             if num_tasks <= 5:
                 log(f'  task finished: [{task_idx}/{num_tasks}]')
             elif task_idx%(num_tasks//5)==0:

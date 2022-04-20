@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N Retro_without_timeout
-#PBS -l nodes=cnode6:ppn=20
+#PBS -N Retro_with_timeout
+#PBS -l nodes=cnode5:ppn=20
 #PBS -l walltime=7:00:00:00
 #PBS -o /home/hwkim/SVS/save/out.out
 #PBS -e /home/hwkim/SVS/save/error.txt
