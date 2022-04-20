@@ -185,7 +185,7 @@ def train_SVS(args):
 
 
     # 3. Finish and save the result
-    torch.save(best_model,f'{save_dir}/GAT_best_model_{str(best_epoch)}.pt')
+    torch.save(best_model,f'{save_dir}/Best_model_{str(best_epoch)}.pt')
     now = datetime.now()
     finished_at = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
     time_elapsed = int(time.time()-since)

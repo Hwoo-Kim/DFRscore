@@ -4,9 +4,9 @@ from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
 from rdkit.Chem.FragmentMatcher import FragmentMatcher
-from scripts.utils import timeout, TimeoutError
 from multiprocessing import Process, Queue
 from datetime import datetime
+import timeout_decorator
 import queue # imported for using queue.Empty exception
 import pickle
 import shutil
@@ -311,14 +311,8 @@ def batch_retro_analysis(
     Saves the result file.
     '''
 
-    @timeout(max_time)
-    def retro_analysis(target_in_smiles:str, reactant_bag:set, depth:int, rxn_templates:list):
-        rxn_objects = []
-        for rxn in rxn_templates:
-            try:
-                rxn_objects.append(Rxn(rxn))
-            except:
-                rxn_objects.append(None)
+    @timeout_decorator.timeout(max_time, timeout_exception=TimeoutError, use_signals=False)
+    def retro_analysis(target_in_smiles:str, reactant_bag:set, depth:int, rxn_objects:list):
         synthesis_tree = SynthesisTree(target_in_smiles)
         positives_dict= dict()
 
@@ -345,6 +339,13 @@ def batch_retro_analysis(
         return result[0], result[1], in_R_bag
 
     ## Main operation
+    rxn_objects = []
+    for rxn in rxn_templates:
+        try:
+            rxn_objects.append(Rxn(rxn))
+        except:
+            rxn_objects.append(None)
+
     Retroanalysis_only_smiles, Retroanalysis_with_tree, Neg, in_R_bag, Failed = [], [], [], [], []
     #pos_cnt_list, Neg_cnt_list= [], []
     for i in range(depth):
@@ -353,7 +354,7 @@ def batch_retro_analysis(
 
     for smi in targets_in_smiles:
         try:
-            test_result, tree, _in_R_bag = retro_analysis(smi, reactant_bag, depth, rxn_templates)
+            test_result, tree, _in_R_bag = retro_analysis(smi, reactant_bag, depth, rxn_objects)
         except TimeoutError as e:
             Failed.append(smi)
             continue

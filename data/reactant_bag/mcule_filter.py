@@ -39,7 +39,7 @@ def do_job(tasks):
                 except:
                     continue
                 if mol is None: continue
-                if not MolWt(mol): continue
+                #if not MolWt(mol): continue
                 ms.append(Smiles(mol)+'\n')
             
             if ps_numb == 0:

@@ -82,27 +82,6 @@ def train_save_dir_setting(args):
     os.mkdir(save_dir)
     return data_dir, save_dir
 
-class TimeoutError(Exception):
-    pass
-
-def timeout(seconds, error_message=os.strerror(errno.ETIME)):
-    def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)  # cancel the alarm
-            return result
-
-        return wraps(func)(wrapper)
-
-    return decorator
-
 def get_cuda_visible_devices(num_gpus: int) -> str:
     """Get available GPU IDs as a str (e.g., '0,1,2')"""
     max_num_gpus = 4
@@ -142,12 +121,4 @@ def get_cuda_visible_devices(num_gpus: int) -> str:
     return idle_gpus
 
 if __name__=='__main__':
-    limit = 3
-    @timeout(limit)
-    def foo(sec):
-        time.sleep(sec)
-        print('Here')
-    try:
-        foo(4)
-    except TimeoutError as e:
-        print('Timeout!')
+    pass

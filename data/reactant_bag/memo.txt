@@ -18,3 +18,10 @@ new_emolecules.smi:
   2. Filtered with 'emolecules_filter.py'. (Mw < 350)
   3. Converted into canonicalized SMILES.   
     --> <new_emolecules.smi>
+
+mcule.smi:
+  1. Downloaded 'Mcule Building Blocks' (last updated: March 18, 2022)
+  (https://mcule.com)
+  2. Filtered with 'mcule_filter.py' (Mw < 350)
+  3. Converted into canonicalized SMILES.   
+    --> <mcule.smi>
