@@ -22,13 +22,14 @@ def main_train(args):
         print('1. Data preprocessing phase')
         print('  Processed data already exists.')
         print('  Training data preprocessing finished.')
+        args.data_dir = preprocess_dir
     else:
         os.mkdir(preprocess_dir)
         args.preprocess_logger = logger(os.path.join(preprocess_dir, 'preprocessing.log'))
         args.preprocess_logger('1. Data preprocessing phase')
         args.preprocess_logger(f'  Started at: {since_inform}')
         args.preprocess_logger(f'  Data will be generated in: {preprocess_dir}')
-    args.data_dir = train_data_preprocess(args=args)
+        args.data_dir = train_data_preprocess(args=args)
 
     # 2. model train
     train_SVS(args=args)
@@ -39,7 +40,6 @@ if __name__=='__main__':
     parser.add_argument('--data_dir', type = str, help = 'path to retro analysis result directory')
     parser.add_argument('--save_name', type = str, help = "model's name to be saved as")
     parser.add_argument('--num_data', type = int, help = 'number of data used in train/val/test.')
-    parser.add_argument('--problem', type = str, help = "type of problem. must be one of between 'regression' and 'classification'")
     # Default setting
     parser.add_argument("--data_preprocessing", type = str, default='processed_data', help = "name of preprocessed data.")
     parser.add_argument('--num_cores', type = str, default=4, help = 'number of cores')
@@ -48,8 +48,8 @@ if __name__=='__main__':
     parser.add_argument('--batch_size', type = int, default=128, help = 'batch size')
     parser.add_argument('--num_threads', type = int, default=2, help = 'the number of threads')
     parser.add_argument('--len_features', type = int, default=36, help = 'dim of atomic feature')
-    parser.add_argument('--n_conv_layer', type = int, default=5, help = 'number of convolution layers')
-    parser.add_argument('--n_fc_layer', type = int, default=4, help = 'number of fully connected layers')
+    parser.add_argument('--n_conv_layer', type = int, default=6, help = 'number of convolution layers')
+    parser.add_argument('--n_fc_layer', type = int, default=3, help = 'number of fully connected layers')
     parser.add_argument('--num_heads', type = int, default=8, help = 'number of heads for multi-head attention')
     parser.add_argument('--conv_dim', type = int, default=256, help = 'graph conv layer hidden dimension')
     parser.add_argument('--fc_dim', type = int, default=128, help = 'fc layer hidden dimension')

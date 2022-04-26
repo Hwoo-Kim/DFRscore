@@ -68,21 +68,9 @@ def test(model,loss_fn,test_data_loader):
 def train_SVS(args):
     # 0. initial setting
     data_dir = args.data_dir
-    #save_dir = os.path.join(args.save_dir,f'/model_{args.data_preprocessing}_{args.n_conv_layer}_{args.conv_dim}_{args.fc_dim}_{args.lr}')
     save_dir = args.save_dir
     log = args.logger
     log('2. Model Training Phase')
-    # For myself
-    '''
-    import shutil
-    dir_name=data_dir.split('/')[-1]
-    save_name = save_dir.split('/')[-2]
-    if os.path.isdir(f'/scratch/hwkim/{save_name}/{dir_name}'):
-        log('Data Exists!')
-    else:
-        shutil.copytree(data_dir, f'/scratch/hwkim/{save_name}/{dir_name}')
-        '''
-    #new_data_dir=f'/scratch/hwkim/{save_name}/{dir_name}'
     new_data_dir=data_dir
     now = datetime.now()
     since_from = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
@@ -90,14 +78,7 @@ def train_SVS(args):
     # 1. Set training parameters
     torch.set_num_threads(int(args.num_threads))
 
-    assert args.problem in ['regression', 'classification'], \
-            "args.problem must be one between ['regression', 'classification']"
-    if args.problem == 'regression':
-        loss_fn = HingeMSELoss
-        args.out_dim = 1
-    else:
-        loss_fn = nn.CrossEntropyLoss(reduction='mean')
-        args.out_dim = args.max_step + 1
+    loss_fn = HingeMSELoss
     global MAX_STEP
     MAX_STEP = args.max_step
 
@@ -109,8 +90,7 @@ def train_SVS(args):
             num_heads=args.num_heads,
             len_features=args.len_features,
             max_num_atoms=args.max_num_atoms,
-            out_dim=args.out_dim,
-            problem=args.problem,
+            max_step=args.max_step,
             dropout=args.dropout)
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -200,12 +180,12 @@ def train_SVS(args):
         pickle.dump({'train': train_loss_history, 'val':val_loss_history}, fw)
 
     # 4. Test phase
-    predictor.eval()
-    test_loss_list = test(predictor,loss_fn,test_data_loader)
-    test_loss= np.mean(test_loss_list)
-    # Logging
-    log()
-    log(f'  ----- Test result -----',f'  test loss: {test_loss}')
+    #predictor.eval()
+    #test_loss_list = test(predictor,loss_fn,test_data_loader)
+    #test_loss= np.mean(test_loss_list)
+    ## Logging
+    #log()
+    #log(f'  ----- Test result -----',f'  test loss: {test_loss}')
 
 if __name__=='__main__':
     ZERO = torch.tensor(0).float()

@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 DATA_SPLIT_SEED = 1024
-PROBLEM = None
+PROBLEM = 'regression'
 # 1. Data splitting functions
 def processing_data(data_dir,max_step,logger,num_data):
     global DATA_SPLIT_SEED, PROBLEM
@@ -227,9 +227,8 @@ def train_data_preprocess(args):
     preprocess_dir = args.preprocess_dir
     log = args.preprocess_logger
     global PROBLEM
-    PROBLEM = args.problem
 
-    ratio = [8,1,1]         # train : val : test
+    ratio = [8,2,0]         # train : val : test
     log()
     labeled_data, class_sizes = processing_data(args.data_dir,args.max_step,log,args.num_data)        # lists of 'smi\tlabel\n'
     log('  Data preprocessing continued.')
