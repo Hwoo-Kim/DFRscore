@@ -39,27 +39,38 @@ class InferenceDataset():
         data['adj'] = self.adjs[idx]
         return data
 
-def gat_collate_fn(batch):
+def mpnn_collate_fn(batch):
     # adjacency: [N,N]
     # node_feature: [N,node]
+    # edge_feature: [N,N,edge]
     sample = dict()
     adj_batch=[]
     node_batch=[]
+    edge_batch=[]
     label_batch=[]
 
     max_num_atom = np.max(np.array([b['N_atom'] for b in batch]))
-    node_dim = batch[0]['feature'].size(-1)
+    node_dim, edge_dim = batch[0]['node_feat'].size(-1), batch[0]['edge_feat'].size(-1)
     for b in batch:
-        num_atoms = b['feature'].size(0)
+        num_atoms = b['node_feat'].size(0)
 
         adj = torch.zeros((max_num_atom,max_num_atom))
+        #node = np.zeros((max_num_atom,node_dim))
+        edge = torch.zeros((max_num_atom,max_num_atom,edge_dim))
+        
         adj[:num_atoms, :num_atoms] = b['adj']
         adj_batch.append(adj)
 
-        node_batch.append(b['feature'])
+        node_batch.append(b['node_feat'])
+
+        edge[:num_atoms, :num_atoms, :edge_dim] = b['edge_feat']
+        edge_batch.append(edge)
+
         label_batch.append(b['label'])
 
     sample['adj']=torch.stack(adj_batch,0)
-    sample['feature']=pad(node_batch,batch_first=True,padding_value=0.0)
+    sample['node']=pad(node_batch,batch_first=True,padding_value=0.0)
+    sample['edge']=torch.stack(edge_batch,0)
     sample['label']=torch.tensor(label_batch)
     return sample        
+

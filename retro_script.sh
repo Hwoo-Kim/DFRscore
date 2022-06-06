@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N Retro_GGM_100k_text
-#PBS -l nodes=gnode10:ppn=32
+#PBS -N GGM_250k_11000
+#PBS -l nodes=cnode17:ppn=16
 #PBS -l walltime=7:00:00:00
 #PBS -o /home/hwkim/SVS/save/out.out
 #PBS -e /home/hwkim/SVS/save/error.txt
@@ -15,7 +15,8 @@ conda activate SVS
 
 cd ~/SVS
 
-retro_target=data/retro_target_data/GGM_test.smi
+retro_target=data/retro_target_data/GGM.smi
+#retro_target=data/SCscore_case_study/false_pos.smi
 #retro_target=data/retro_target_data/test.smi
 
 python retro_analysis.py \
@@ -23,11 +24,11 @@ python retro_analysis.py \
     --reactant data/reactant_bag/mcule.smi \
     --retro_target $retro_target \
     --depth 4 \
-    --start_index 0 \
-    --num_cores 32 \
-    --num_molecules 100000 \
+    --start_index 250000 \
+    --num_cores 16 \
+    --num_molecules 11000 \
     --exclude_in_R_bag True \
-    --path False
-#    --max_time 300
+    --path False \
+    --max_time 3600
 
 date

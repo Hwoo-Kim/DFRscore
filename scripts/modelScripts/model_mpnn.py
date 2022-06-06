@@ -4,6 +4,7 @@ import time
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.autograd import Variable
 import numpy as np
 np.set_printoptions(suppress=True)
 
@@ -13,18 +14,12 @@ from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 #from rdkit.Chem.rdmolops import GetFormalCharge
 
 sys.path.append(f'{os.path.abspath(os.path.dirname(__file__))}')
-from layers import GraphAttentionLayer
-from preprocessing import get_node_feature, sssr_to_ring_feature
-from data import InferenceDataset
+#from .layers import GraphAttentionLayer
+from layers_mpnn import MessageFunction, UpdateFunction, Readout
 
-CONV_DIM = 256
-FC_DIM = 128
-NUM_GAT_LAYER = 6
-NUM_FC_LAYER = 3
-NUM_HEADS= 8
-LEN_FEATURES = 36
-MAX_NUM_ATOM = 64
-MAX_STEP = 4
+from preprocessing_mpnn import get_node_feature, get_edge_feature, sssr_to_ring_feature
+from data_mpnn import InferenceDataset
+
 
 class DFRscore(nn.Module):
     """
@@ -38,64 +33,69 @@ class DFRscore(nn.Module):
       2-2) From RDKit Molecule object:
         score = model.molToScore(<Molecule object>) / scores = model.molListToScores(<list of Molecule objects>)
     """
-    global CONV_DIM, FC_DIM, NUM_GAT_LAYER, NUM_FC_LAYER, NUM_HEADS, LEN_FEATURES, MAX_NUM_ATOM, MAX_STEP
+    _EDGE_FEATURE=5
+    _NODE_FEATURE=30
+    _HIDDEN_DIM=80
+    _MESSAGE_DIM=80
+    _NUM_LAYER=3
+    _MAX_STEP = 4
+
     def __init__(
             self,
-            conv_dim=CONV_DIM,
-            fc_dim=FC_DIM,
-            n_GAT_layer=NUM_GAT_LAYER,
-            n_fc_layer=NUM_FC_LAYER,
-            num_heads=NUM_HEADS,
-            len_features=LEN_FEATURES,
-            max_num_atoms=MAX_NUM_ATOM,
-            max_step=MAX_STEP,
+            edge_dim=_EDGE_FEATURE,
+            node_dim=_NODE_FEATURE,
+            hidden_dim=_HIDDEN_DIM,
+            message_dim=_MESSAGE_DIM,
+            num_layers=_NUM_LAYER,
+            max_step=_MAX_STEP,
+
             dropout:float=0
             ):
         super().__init__()
-        self.conv_dim = conv_dim
-        self.fc_dim = fc_dim
-        self.n_GAT_layer = n_GAT_layer
-        self.n_fc_layer = n_fc_layer
-        self.num_heads = num_heads
-        self.len_features = len_features
-        self.max_num_atoms = max_num_atoms
+        self.edge_dim = edge_dim
+        self.node_dim = node_dim
+        self.hidden_dim = hidden_dim
+        self.message_dim = message_dim
+        self.num_layers = num_layers
+        self.max_step = max_step
         self.out_dim = 1
         self.dropout = nn.Dropout(dropout)
-        self.max_step = max_step
 
-        self.embedding = nn.Linear(len_features,conv_dim)
-        self.GAT_layers=nn.ModuleList(
-                [GraphAttentionLayer(
-                    emb_dim=conv_dim,
-                    num_heads=num_heads,
-                    alpha=0.2,
-                    bias=True
-                    )
-                    for i in range(n_GAT_layer)]
-                )
-        self.fc_layers=nn.ModuleList([nn.Linear(conv_dim,fc_dim)])
-        for i in range(n_fc_layer-2):
-            self.fc_layers.append(nn.Linear(fc_dim,fc_dim))
-        self.pred_layer = nn.Linear(fc_dim, self.out_dim)
+        self.message = MessageFunction(self.edge_dim,self.hidden_dim,self.message_dim)
+        self.update = UpdateFunction(self.hidden_dim,self.message_dim)
+        self.readout = Readout(self.hidden_dim,self.out_dim)
+        self.node_embedding = nn.Linear(self.node_dim,self.hidden_dim)
+        self.edge_embedding = self.message.edge_embedding()
+
         self.relu = nn.ReLU()
         self.elu = nn.ELU()
         self.softmax = nn.Softmax(dim=-1)
+
         self.path_to_model = 'Not restored'
         self.device = torch.device('cpu')
 
-    def forward(self,x,A):
-        x = self.embedding(x)
-        for layer in self.GAT_layers:
-            x = layer(x, A)         # output was already applied with ELU.
-            x = self.dropout(x)
-        x = x.mean(1)
-        for idx, layer in enumerate(self.fc_layers):
-            x = layer(x)
-            x = self.relu(x)
-            x = self.dropout(x)
-        retval = self.pred_layer(x)
-        retval = self.elu(retval).squeeze(-1)+1.5
-        return retval
+    def forward(self, x_in, e, A):
+        """
+        x_in: [B,N,node]
+        e:    [B,N,N,edge]
+        A:    [B,N,N]
+        """
+        masking = (torch.sum(x_in,2)>0).unsqueeze(-1)
+        x_hidden = [self.node_embedding(x_in)*masking]              # [B,N,F]
+        B,N,F = x_hidden[0].size()
+        e_embed = self.edge_embedding(e)
+        e_embed = e_embed.view(B,N,N,self.message_dim,self.hidden_dim)
+
+        for l in range(self.num_layers):
+            message = self.message(x_hidden[l], e_embed)            # [B,N,F], [B*N*N,edge] -> [B*N*N,message]
+            message = torch.einsum('ijk,ijkl->ijl',A,message)       # [B,N,message]
+
+            h_l = self.update(x_hidden[l],message)                  # [B,N,F]
+            h_l = h_l * masking
+            x_hidden.append(h_l)
+
+        retval = self.readout(x_hidden[0], x_hidden[-1],masking)      # [B,N,1]
+        return self.elu(retval).squeeze(-1)+1.5
 
     def restore(self, path_to_model):
         if self._cuda_is_available():
@@ -197,16 +197,17 @@ class DFRscore(nn.Module):
         return scores.numpy()
 
     def cuda(self):
-        _DFR = super().cuda()
-        self.device = _DFR.embedding.weight.device
-        return _DFR
+        _DFR_SCORE = super().cuda()
+        self.device = _DFR_SCORE.node_embedding.weight.device
+        return _DFR_SCORE
 
     def to(self, torch_device):
-        _DFR = super().to(torch_device)
-        self.device = _DFR.embedding.weight.device
-        return _DFR
+        _DFR_SCORE = super().to(torch_device)
+        self.device = _DFR_SCORE.node_embedding.weight.device
+        return _DFR_SCORE
 
-    def _cuda_is_available(self):
+    @staticmethod
+    def _cuda_is_available():
         return torch.cuda.is_available()
 
     def __repr__(self):
@@ -220,3 +221,14 @@ class DFRscore(nn.Module):
                 f'  len_features: {self.max_num_atoms}\n'+ \
                 f'  out_dim: {self.out_dim}\n' + \
                 ')'
+
+
+if __name__=='__main__':
+    dfr = DFRscore()
+    x_in = torch.zeros(2,20,36)
+    x_in[:,:16,:] = torch.ones(2,16,36)
+    x_in[0,:,:] = x_in[0,:,:]*2
+    print(x_in)
+    e = torch.ones(2,20,20,4)
+    A = torch.ones(2,20,20)
+    print(dfr(x_in,e,A))

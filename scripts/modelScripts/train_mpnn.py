@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from scripts.modelScripts.model import DFRscore
-from scripts.modelScripts.data import TrainDataset, gat_collate_fn
+from scripts.modelScripts.model_mpnn import DFRscore
+from scripts.modelScripts.data_mpnn import TrainDataset, mpnn_collate_fn
 import scripts.utils as utils
 
 import numpy as np
@@ -31,10 +31,11 @@ def HingeMSELoss(y_pred, y_true):
 def train(model,loss_fn,optimizer,train_data_loader):
     train_loss_list = []
     for i_batch,batch in enumerate(train_data_loader):
-        x = batch['feature'].float().cuda()
+        h = batch['node'].float().cuda()
+        e = batch['edge'].float().cuda()
         A = batch['adj'].float().cuda()
         y = batch['label'].cuda()             # label is in int type
-        y_pred = model(x,A) 
+        y_pred = model(h,e,A) 
         loss = loss_fn(y_pred,y)
         optimizer.zero_grad()
         loss.backward()
@@ -45,10 +46,11 @@ def train(model,loss_fn,optimizer,train_data_loader):
 def validate(model,loss_fn,val_data_loader):
     val_loss_list = []
     for i_batch,batch in enumerate(val_data_loader):
-        x = batch['feature'].float().cuda()
+        h = batch['node'].float().cuda()
+        e = batch['edge'].float().cuda()
         A = batch['adj'].float().cuda()
         y = batch['label'].cuda()
-        y_pred = model(x,A)
+        y_pred = model(h,e,A)
         loss = loss_fn(y_pred,y)
         val_loss_list.append(loss.data.cpu().numpy())
     return val_loss_list
@@ -56,10 +58,11 @@ def validate(model,loss_fn,val_data_loader):
 def test(model,loss_fn,test_data_loader):
     test_loss_list = []
     for i_batch,batch in enumerate(test_data_loader):
-        x = batch['feature'].float().cuda()
+        h = batch['node'].float().cuda()
+        e = batch['edge'].float().cuda()
         A = batch['adj'].float().cuda()
         y = batch['label'].cuda()
-        y_pred = model(x,A) 
+        y_pred = model(h,e,A) 
         loss = loss_fn(y_pred,y)
         test_loss_list.append(loss.data.cpu().numpy())
     return test_loss_list
@@ -83,15 +86,14 @@ def train_DFRscore(args):
     MAX_STEP = args.max_step
 
     predictor = DFRscore(
-            conv_dim=args.conv_dim,
-            fc_dim=args.fc_dim,
-            n_GAT_layer=args.n_conv_layer,
-            n_fc_layer=args.n_fc_layer,
-            num_heads=args.num_heads,
-            len_features=args.len_features,
-            max_num_atoms=args.max_num_atoms,
+            edge_dim=args.edge_dim,
+            node_dim=args.node_dim,
+            hidden_dim=args.hidden_dim,
+            message_dim=args.message_dim,
+            num_layers=args.num_layers,
             max_step=args.max_step,
-            dropout=args.dropout)
+            dropout=args.dropout
+            )
     predictor.cuda()
 
     optimizer = torch.optim.Adam(predictor.parameters(),lr=args.lr)
@@ -117,20 +119,20 @@ def train_DFRscore(args):
                     TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='train'),
                     batch_size=args.batch_size,
                     shuffle = True,
-                    collate_fn=gat_collate_fn,
+                    collate_fn=mpnn_collate_fn,
                     num_workers=2
                     )
     val_data_loader = DataLoader(
                     TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='val'),
                     batch_size=args.batch_size,
                     shuffle = False,
-                    collate_fn=gat_collate_fn
+                    collate_fn=mpnn_collate_fn
                     )
     test_data_loader = DataLoader(
                     TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
                     batch_size=args.batch_size,
                     shuffle = False,
-                    collate_fn=gat_collate_fn
+                    collate_fn=mpnn_collate_fn
                     )
 
     train_loss_history = []
@@ -143,7 +145,7 @@ def train_DFRscore(args):
         train_epoch_loss= np.mean(train_epoch_loss_list)
         train_loss_history.append(train_epoch_loss)
         if (i+1)%5 == 0:
-            torch.save(predictor.state_dict(),f'{save_dir}/DFR_model_{str(i+1)}.pt')
+            torch.save(predictor.state_dict(),f'{save_dir}/DFRscore_{str(i+1)}.pt')
     
         # 2-2. Validation phase
         predictor.eval()

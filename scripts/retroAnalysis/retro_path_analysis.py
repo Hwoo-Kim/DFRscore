@@ -448,7 +448,8 @@ def retrosyntheticAnalyzer(args):
             fr.readline()
         targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
     batch_size = min(args.batch_size, args.num_molecules//args.num_cores)
-    if args.num_molecules % batch_size != 0:
+    if batch_size == 0: batch_size = 1
+    elif args.num_molecules % batch_size != 0:
         #num_of_tasks +=1
         batch_size +=1
 

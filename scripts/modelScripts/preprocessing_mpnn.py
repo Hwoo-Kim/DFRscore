@@ -11,7 +11,7 @@ import random
 import time
 from datetime import datetime
 
-BOND_TYPES=[Chem.rdchem.BondType.SINGLE, Chem.rdchem.BondType.DOUBLE, Chem.rdchem.BondType.TRIPLE, Chem.rdchem.BondType.AROMATIC]
+BOND_TYPES=[Chem.rdchem.BondType.SINGLE, Chem.rdchem.BondType.DOUBLE, Chem.rdchem.BondType.TRIPLE, Chem.rdchem.BondType.AROMATIC, 'ELSE']
 DATA_SPLIT_SEED = 1024
 PROBLEM = 'regression'
 # 1. Data splitting functions
@@ -144,8 +144,6 @@ def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
             data_list, task_idx = args[0], args[1]
             get_graph_feature(data_list,
                     save_dir,
-                    max_num_atoms,
-                    len_features,
                     batch_size,
                     task_idx 
                     )
@@ -169,7 +167,7 @@ def get_graph_feature(data_list,
         num_atoms = mol.GetNumAtoms()
 
         # 1. Adjacency
-        adj = torch.from_numpy(GetAdjacencyMatrix(mol) + np.eye(num_atoms)).bool()
+        adj = torch.from_numpy(GetAdjacencyMatrix(mol)).bool()
 
         # 2. Node Feature
         sssr = Chem.GetSymmSSSR(mol)
@@ -180,18 +178,28 @@ def get_graph_feature(data_list,
         node_feature = np.concatenate([np.array(node_feature), ring_feature],axis=1)
         node_feature = torch.from_numpy(node_feature).bool()
 
+        # 3. Edge Feature
+        num_atoms = mol.GetNumAtoms()
+        edge_feature = np.zeros((num_atoms,num_atoms,len(BOND_TYPES)),dtype=np.bool)
+        for bond in mol.GetBonds():
+            edge_feature[bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),:] = get_edge_feature(bond)
+        edge_feature = torch.from_numpy(edge_feature).bool()
+        edge_feature = edge_feature + edge_feature.transpose(0,1)
+
         if for_inference:
             with open(f'{save_dir}/{idx}.pkl','wb') as fw:
                 pickle.dump({'smi':smi,
                         'N_atom': num_atoms,
-                        'feature':node_feature,
+                        'node_feat':node_feature,
+                        'edge_feat':edge_feature,
                         'adj':adj},
                         fw)
         else:
             with open(f'{save_dir}/{label}_{idx}.pkl','wb') as fw:
                 pickle.dump({'smi':smi,
                         'N_atom': num_atoms,
-                        'feature':node_feature,
+                        'node_feat':node_feature,
+                        'edge_feat':edge_feature,
                         'adj':adj,
                         'label':label},
                         fw)
@@ -214,13 +222,13 @@ def sssr_to_ring_feature(sssr, num_atoms):
 def get_node_feature(atom):
     return np.array(one_of_k_encoding(str(atom.GetSymbol()),['C','N','O','F','S','Cl','Br','I','B','P','ELSE'])+
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
-                    one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
+                    #one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    [atom.GetIsAromatic()])
-                    # 11+6+6+6+1 = 30
+                    [atom.GetIsAromatic()],dtype=np.bool)
+                    # 11+6+6+1 = 24
 
 def get_edge_feature(bond):
-    return np.array(one_of_k_encoding(bond.GetBondType(), BOND_TYPES))
+    return np.array(one_of_k_encoding(bond.GetBondType(), BOND_TYPES),dtype=np.bool)
 
 # 3. Main functions
 def train_data_preprocess(args):
@@ -247,8 +255,6 @@ def train_data_preprocess(args):
     since = time.time()
     # Creating Tasks
     for batch_idx in range(num_batch):
-        #indices = list(range(batch_size*batch_idx, batch_size*(batch_idx+1)))
-        #task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], indices)
         task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], batch_idx)
         tasks.put(task)
 
