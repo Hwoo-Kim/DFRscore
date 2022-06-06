@@ -14,13 +14,13 @@ source activate SVS_A
 cd ~/SVS
 
 data_dir=save/PubChem/mcule_selected/
-model_save_name=MPNN_full
+model_save_name=MPNN_half
 #data_preprocessing=no_additional_seed1024
-data_preprocessing=with_ring_inform
+data_preprocessing=with_ring_inform_half
 
 # Training parameters
 # Not yet.
-num_data=250000
+num_data=125000
 num_epoch=100
 lr=0.0005
 batch_size=32

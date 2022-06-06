@@ -134,7 +134,7 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
 
 
 # 2. Graph feature generating functions
-def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
+def do_get_graph_feature(tasks,save_dir, batch_size):
     while True:
         try:
             args = tasks.get(timeout=1)
@@ -262,7 +262,7 @@ def train_data_preprocess(args):
     for p_idx in range(args.num_cores):
         p = Process(
                 target=do_get_graph_feature,
-                args=(tasks,save_dir,args.max_num_atoms,args.len_features, batch_size)
+                args=(tasks,save_dir, batch_size)
                 )
         procs.append(p)
         p.start()
