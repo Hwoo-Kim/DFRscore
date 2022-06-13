@@ -1,110 +1,104 @@
 import os, sys
-import time
-from multiprocessing import Process, Queue
-import queue
-from tqdm import tqdm
+from multiprocessing import Pool
+from rdkit import Chem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit import RDLogger
+import numpy as np
 RDLogger.DisableLog('rdApp.*')
 
-def NoStar(s):
-    return s.count('*') == 0
+class RetroFilter:
+    def __init__(self, target_file, num_cores, num_molecules):
+        self.target_file = target_file
+        self.save_name = target_file.split('/')[-1]
+        self.num_cores = num_cores
+        self.num_molecules = num_molecules
 
-def OneMol(s):
-    return s.count('.') == 0
+    @staticmethod
+    def NoStar(s):
+        return s.count('*') == 0
+    
+    @staticmethod
+    def OneChemical(s):
+        return s.count('.') == 0
+    
+    @staticmethod
+    def GetRandomNumbers(maximum, num_to_sample):
+        assert num_to_sample <= maximum, "num_to_sample must not be large than maximum."
+        seed = 12345
+        rand_generator = np.random.default_rng(seed)
+        rand_ints = set()
 
-def do_job(tasks):
-    while True:
-        try:
-            task = tasks.get(timeout=0.1)
-        except queue.Empty:
-            break
-        else:
-            # main operation
-            ps_numb, smiles, dir_name = task
-            ms = []
-            iterator = smiles
-            if ps_numb ==0:
-                iterator = tqdm(smiles, total = len(smiles))
-            for s in iterator:
-                if not NoStar(s): continue
-                if not OneMol(s):
-                    continue
-                try: mol = Mol(s)
-                except:
-                    continue
-                if mol is None: continue
-                ms.append(Smiles(mol)+'\n')
-            
-            with open(dir_name + "filtered_%d.txt" %(ps_numb), 'w') as fw:
-                fw.writelines(ms)
-    return True
+        more = num_to_sample
+        while True:
+            rand_ints.update(rand_generator.integers(low=0, high=maximum, size=more))
+            if len(rand_ints) == num_to_sample: break
+            more = num_to_sample - len(rand_ints)
+        return list(rand_ints)
 
-def joining_files(target_dir:str):
-    files = os.listdir(target_dir)
-    smis = []
-    for file_name in files:
-        with open(target_dir + file_name, 'r') as fr:
-            smis += fr.readlines()
-    with open('filtered.smi', 'w') as fw:
-        fw.writelines(smis)
-    print(f'Length of passed smiles:\n  {len(smis)}')
+    @classmethod
+    def GetRandomSamples(cls, data_list, num_to_sample):
+        maximum = len(data_list)
+        rand_ints = cls.GetRandomNumbers(maximum, num_to_sample)
+        return [data_list[idx]for idx in rand_ints]
 
-    import shutil
-    shutil.rmtree(target_dir)
+    @classmethod
+    def FilterMolecule(cls, smi):
+        if not all([cls.OneChemical(smi), cls.NoStar(smi)]):
+            return None
+        try: mol= Mol(smi)
+        except: return None
+        if mol == None: return None
+        return Smiles(mol)
 
-    return True
+    def main(self):
+        with open(self.target_file, 'r') as fr:
+            target_smis = fr.read().splitlines()
+            if not self.num_molecules == 'All':
+                print(f'  sampling {self.num_molecules} molecules...', end=' ')
+                target_smis = self.GetRandomSamples(target_smis, self.num_molecules)
+                print('done.')
+            target_smis = list(set(target_smis))
 
-def main(target_smiles:list, numb_cores:int):
-    number_of_processes = numb_cores
-    tasks_to_accomplish = Queue()
-    processes = []
-    target_len = len(target_smiles)
-    print(f'The number of target molecules:\n  {target_len}')
+        filtered_smis = []
+        with Pool(self.num_cores) as p:
+            result = p.map(self.FilterMolecule, target_smis)
+        for smi in result:
+            if smi:
+                filtered_smis.append(smi+'\n')
 
-    # generating scratch folder
-    i = 1
-    while True:
-        dir_name = f'tmp{i}/'
-        try:
-            os.mkdir(dir_name)
-        except FileExistsError as e:
-            i+=1
-            continue
-        else:
-            break
+        print(f' after filtering: {len(filtered_smis)}')
+        print('-'*20)
+        with open(f'filtered_{self.save_name}', 'w') as fw:
+            fw.writelines(filtered_smis)
 
-    # creating tasks
-    for task_idx in range(number_of_processes):
-        args = (task_idx, target_smiles[int(target_len*task_idx/numb_cores):int(target_len*(task_idx+1)/numb_cores)], dir_name)
-        tasks_to_accomplish.put(args)
-
-    # creating processes
-    print("I'm creating %d processors..." %(numb_cores))
-    for w in range(number_of_processes):
-        p = Process(target=do_job, args=(tasks_to_accomplish,))
-        processes.append(p)
-        p.start()
-        time.sleep(0.1)
-    #print("All the processes have started w/o any problem.")
-
-    # completing process
-    for p in processes:
-        p.join()
-
-    # unifying files
-    joining_files(dir_name)
-
-    return True
+        return True
 
 if __name__ == '__main__':
-    target_file = sys.argv[1]
-    try:
-        numb_cores = int(sys.argv[2])
+    try: 
+        target_file, num_cores, num_molecules = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     except:
-        numb_cores = 1
-    with open(target_file, 'r') as fr:
-        smis = fr.read().splitlines()
-    main(smis, numb_cores)
+        target_file, num_cores, num_molecules = sys.argv[1], int(sys.argv[2]), 'All'
+
+    print(f'target_file: {target_file}')
+    print(f'num_cores: {num_cores}')
+    print(f'num_molecules: {num_molecules}')
+
+    while True:
+        inp = input(str('  Proceed? [Y,n] '))
+        if inp == 'Y':
+            save_name = target_file.split('/')[-1]
+            print(f'\nsave file name: filtered_{save_name}')
+            print(f'In process with multiprocessing (procs = {num_cores})...')
+            retro_filter = RetroFilter(target_file, num_cores, num_molecules)
+            retro_filter.main()
+            break
+        elif inp == 'n':
+            print('Exit.')
+            break
+        else:
+            print('The input was neither [Y,n].')
+            print('Please type again.')
+            continue
+

@@ -33,6 +33,6 @@ Y
 EOF
 
 #7 ARAE
-python molecules_filter.py before_filtering/ARAE.smi $num_cores 1000000 <<EOF
+python molecules_filter.py before_filtering/ARAE.smi $num_cores <<EOF
 Y
 EOF

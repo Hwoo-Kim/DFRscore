@@ -3,13 +3,13 @@ All files were filtered by 'molecules_filter.py'
 ### Main dataset ###
 1. PubChem (randomly selected 10,000,000 molecules from the original file)
   https://pubchem.ncbi.nlm.nih.gov
-  10,000,000 -> 9,180,550
+  10,000,000 -> 8,893,617
 2. ChEMBL
   https://www.ebi.ac.uk/chembl/
   1,941,410 ->  1,685,504
 3. ZINC (randomly selected 2,000,000 molecules from the original file)
   https://zinc.docking.org
-  2,000,000 -> 1,995,510
+  2,000,000 -> 1,995,512
 4. MOSES
   https://github.com/molecularsets/moses
   1,760,737 ->  1,760,737
@@ -20,7 +20,7 @@ All files were filtered by 'molecules_filter.py'
 ### Additional dataset ###
 6. GDBChEMBL (randomly selected 1,000,000 molecules from the original file)
   https://www.frontiersin.org/articles/10.3389/fchem.2020.00046/full
-  1,000,000 ->  1,000,000
+  1,000,000 ->  999,917
 7. ARAE
   https://pubs.acs.org/doi/10.1021/acs.jcim.9b00694
   1,000,000 ->  902,374
