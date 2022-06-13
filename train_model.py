@@ -32,7 +32,7 @@ def main_train(args):
         args.data_dir = train_data_preprocess(args=args)
 
     # 2. model train
-    train_SVS(args=args)
+    train_DFRscore(args=args)
 
 # main operation:
 if __name__=='__main__':

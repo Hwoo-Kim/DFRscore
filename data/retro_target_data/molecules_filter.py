@@ -1,5 +1,5 @@
 import os, sys
-from multiprocessing import Process, Queue
+from multiprocessing import Pool
 import queue
 from tqdm import tqdm
 from rdkit import Chem
@@ -11,25 +11,71 @@ from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 import random, time
 
-def MolWt(mol):
-    return ExactMolWt(mol) < 600
+class RetroFilter:
+    def __init__(self, target_file, num_cores, num_molecules):
+        self.target_file = target_file
+        self.save_name = target_file.split('/')[-1]
+        self.num_cores = num_cores
+        self.num_molecules = num_molecules
 
-def NoStar(s):
-    return s.count('*') == 0
+    @staticmethod
+    def MolWt(mol):
+        return ExactMolWt(mol) < 600
+    
+    @staticmethod
+    def NoStar(s):
+        return s.count('*') == 0
+    
+    @staticmethod
+    def OneChemical(s):
+        return s.count('.') == 0
+    
+    @staticmethod
+    def Sanitize(mol):
+        return int(Chem.SanitizeMol(mol, catchErrors=True))==0
+    
+    @staticmethod
+    def OrganicSubset(mol):
+        organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
+        atoms = mol.GetAtoms()
+        for a in atoms:
+            if not a.GetSymbol() in organic_subset:
+                return False
+        return True
 
-def OneChemical(s):
-    return s.count('.') == 0
+    def FilterMolecule(self, smi):
+        if not all([self.OneChemical(smi), self.NoStar(smi)]):
+            return None
+        try: mol= Mol(smi)
+        except: return None
+        if mol == None: return None
+        if not all([self.Sanitize(mol), self.OrganicSubset(mol), self.MolWt(mol)]):
+            return None
+        return Smiles(mol)
 
-def Sanitize(mol):
-    return int(Chem.SanitizeMol(mol, catchErrors=True))==0
+    def main(self):
+        target_smis = []
+        with open(self.target_file, 'r') as fr:
+            if self.num_molecules == 'All':
+                target_smis = fr.read().splitlines()
+            else:
+                for _ in range(self.num_molecules):
+                    target_smis.append(fr.readline().rstrip())
 
-def OrganicSubset(mol):
-    organic_subset = ['C', 'N', 'O', 'F', 'S', 'Cl', 'Br', 'I', 'B', 'P']
-    atoms = mol.GetAtoms()
-    for a in atoms:
-        if not a.GetSymbol() in organic_subset:
-            return False
-    return True
+        filtered_smis = []
+        with Pool(self.num_cores) as p:
+            result = p.map(self.FilterMolecule, target_smis)
+        for smi in result:
+            if smi:
+                filtered_smis.append(smi+'\n')
+
+        print(f' after filtering: {len(filtered_smis)}')
+        print('-'*20)
+        with open(f'filtered_{self.save_name}', 'w') as fw:
+            fw.writelines(filtered_smis)
+
+        return True
+
 
 def do_job(tasks):
     while True:
@@ -121,11 +167,25 @@ def main(target_smiles:list, numb_cores:int):
     return True
 
 if __name__ == '__main__':
-    target_file = sys.argv[1]
-    try:
-        numb_cores = int(sys.argv[2])
+    #target_file = sys.argv[1]
+    #try:
+    #    numb_cores = int(sys.argv[2])
+    #except:
+    #    numb_cores = 1
+    #with open(target_file, 'r') as fr:
+    #    smis = fr.read().splitlines()
+    #main(smis, numb_cores)
+    try: 
+        target_file, num_cores, num_molecules = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     except:
-        numb_cores = 1
-    with open(target_file, 'r') as fr:
-        smis = fr.read().splitlines()
-    main(smis, numb_cores)
+        target_file, num_cores, num_molecules = sys.argv[1], int(sys.argv[2]), 'All'
+
+    print(f'target_file: {target_file}')
+    print(f'num_cores: {num_cores}')
+    print(f'num_molecules: {num_molecules}')
+    if input(str('  Proceed? [Y,n] ')) == 'Y':
+        save_name = target_file.split('/')[-1]
+        print(f'\nsave file name: filtered_{save_name}')
+        print(f'In process with multiprocessing (procs = {num_cores})...')
+        retro_filter = RetroFilter(target_file, num_cores, num_molecules)
+        retro_filter.main()

@@ -15,9 +15,6 @@ def NoStar(s):
 def OneMol(s):
     return s.count('.') == 0
 
-def MolWt(mol):
-    return ExactMolWt(mol) < 350
-
 def do_job(tasks):
     while True:
         try:
@@ -39,12 +36,8 @@ def do_job(tasks):
                 except:
                     continue
                 if mol is None: continue
-                #if not MolWt(mol): continue
                 ms.append(Smiles(mol)+'\n')
             
-            if ps_numb == 0:
-                print(f'length of given smiles: {len(smiles)}')
-                print(f'length of passed smiles: {len(ms)}')
             with open(dir_name + "filtered_%d.txt" %(ps_numb), 'w') as fw:
                 fw.writelines(ms)
     return True
@@ -57,6 +50,7 @@ def joining_files(target_dir:str):
             smis += fr.readlines()
     with open('filtered.smi', 'w') as fw:
         fw.writelines(smis)
+    print(f'Length of passed smiles:\n  {len(smis)}')
 
     import shutil
     shutil.rmtree(target_dir)

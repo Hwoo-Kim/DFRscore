@@ -9,7 +9,7 @@ from torch.autograd.variable import Variable
 
 class FeedForward(nn.Module):
 
-    def __init__(self, in_dim, out_dim, hidden_dims=(128, 256, 128)):
+    def __init__(self, in_dim, out_dim, hidden_dims=(128, 128)):
         super().__init__()
         self.num_hidden = len(hidden_dims)
         self.fcs = nn.ModuleList()
