@@ -81,7 +81,7 @@ class DFRscore(nn.Module):
         #self.relu = nn.ReLU()
         self.elu = nn.ELU()
         self.softmax = nn.Softmax(dim=-1)
-        self._path_to_model = 'Not restored'
+        self.path_to_model = 'Not restored'
         self.device = torch.device('cpu')
 
         # zero vectors
@@ -102,7 +102,7 @@ class DFRscore(nn.Module):
             self.load_state_dict(torch.load(path_to_model, map_location=torch.device('cpu')))
         else:
             self.load_state_dict(torch.load(path_to_model))
-        self._path_to_model = path_to_model
+        self.path_to_model = path_to_model
 
     def mol_to_graph_feature(self, mol):
         if mol:
@@ -123,6 +123,53 @@ class DFRscore(nn.Module):
         else:
             return self._zero_node_feature, self._zero_adj, 0
 
+    def do_mols_to_graph_feature(self, mol_list, worker, return_dict):
+        node_feats , adjs, N_atoms = [], [], []
+        for mol in mol_list:
+            result = self.mol_to_graph_feature(mol)
+            node_feats.append(result[0])
+            adjs.append(result[1])
+            N_atoms.append(result[2])
+        return_dict[worker] = (node_feats, adjs, N_atoms)
+        return
+
+
+    # TODO: Process implementation
+    #def mols_to_graph_feature(self, mol_list):
+    #    """
+    #    Args:
+    #      mol_list: list of RDKit molecule objects.
+    #    Returns: 
+    #      node_feats: torch tensor
+    #      adjs: torch tensor
+    #      N_atoms: list
+    #    """
+    #    print('Mol To Graph Feature')
+    #    t1 = time.time()
+    #    num_mols = len(mol_list)
+    #    batch_size = num_mols//self.num_cores
+    #    if batch_size*self.num_cores!=num_mols: batch_size+=1
+
+    #    manager = mp.Manager()
+    #    return_dict = manager.dict()
+    #    procs = []
+    #    for worker in range(self.num_cores):
+    #        p = mp.Process(target=self.do_mols_to_graph_feature, args=(mol_list[batch_size*worker:batch_size*(worker+1)], worker, return_dict))
+    #        procs.append(p)
+    #        p.start()
+
+    #    for p in procs:
+    #        p.join()
+    #    print(f'Fin {time.time()-t1}')
+
+    #    node_feats , adjs, N_atoms = [], [], []
+    #    for node_feature, adj, num_atoms in list(return_dict.values()):
+    #        node_feats += node_feature
+    #        adjs += adj
+    #        N_atoms += num_atoms
+
+    #    return node_feats, adjs, N_atoms
+
     def mols_to_graph_feature(self, mol_list):
         """
         Args:
@@ -132,11 +179,12 @@ class DFRscore(nn.Module):
           adjs: torch tensor
           N_atoms: list
         """
+
         print('Mol To Graph Feature')
-        t1 = time.time()
+        since = time.time()
         with mp.Pool(processes=self.num_cores) as p:
             result = p.map(self.mol_to_graph_feature, mol_list)
-        print(f'Fin {time.time()-t1}')
+        print(f'Fin {time.time()-since}')
 
         node_feats , adjs, N_atoms = [], [], []
         for node_feature, adj, num_atoms in result:
@@ -178,7 +226,8 @@ class DFRscore(nn.Module):
                 batch_size = batch_size,
                 shuffle=False, 
                 collate_fn=infer_collate_fn,
-                num_workers=self.num_cores
+                num_workers=0
+                #num_workers=self.num_cores
                 )
 
         scores = []
@@ -224,7 +273,11 @@ class DFRscore(nn.Module):
                 f'  n_GAT_layer: {self.n_GAT_layer}\n'+ \
                 f'  n_fc_layer: {self.n_fc_layer}\n'+ \
                 f'  num_heads: {self.num_heads}\n'+ \
-                f'  out_dim: {self.out_dim}\n' + \
+                f'  len_features: {self.len_features}\n' + \
+                f'  max_step: {self.max_step}\n' + \
+                f'  num_cores: {self.num_cores}\n' + \
+                f'  dropout: {self.dropout}\n' + \
+                f'  device: {self.device}\n' + \
                 ')'
 if __name__ == '__main__':
     l = [1,2,3,4,3,2,12,3,4,2]

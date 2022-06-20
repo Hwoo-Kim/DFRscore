@@ -1,11 +1,10 @@
-#!/bin/bash
+#!/bin/zsh
 
-. ~/.bashrc
 #source activate DFRscore
-conda activate DFRscore
 
-cd ~/DFRscore/Experiments/time_check/
+cd ~/works/DFRscore/Experiments/time_check
 
 num_cores=4
 use_cuda=False
+#python time_check.py $num_cores $use_cuda >> out.log
 python time_check.py $num_cores $use_cuda

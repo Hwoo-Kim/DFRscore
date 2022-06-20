@@ -21,27 +21,24 @@ def time_check(model, file_path, num_to_test):
 num_cores = int(sys.argv[1])
 assert sys.argv[2] in ['True', 'False'], 'Neither True nor False!'
 use_cuda = sys.argv[2] == 'True'
-model_path = '/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
-test_path = f'/home/hwkim/DFRscore/data/retro_target_data/'
+model_path = '/Users/hwkim/works/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
+test_path = f'/Users/hwkim/works/DFRscore/data/retro_target_data/'
 
-num_to_test = 1000
+num_to_test = 10000
 max_step = 4
 
 result_log_path = 'result.log'
 log = logger(result_log_path)
 
-log('----- Input config information -----')
-log(f'  model_path: {model_path}')
-log(f'  num_cores: {num_cores}')
-log(f'  max_step: {max_step}\n')
-
 # 2. Model load
-log('----- Time check started -----')
-predictor = DFRscore()
+log('----- Input config information -----')
+predictor = DFRscore(num_cores=num_cores)
 predictor.restore(model_path)
 if use_cuda: predictor = predictor.cuda()
+log(predictor)
 
 # 3. Get Evaluation Metrics
+log('----- Time check started -----')
 for data_set in ['ZINC.smi', 'ChEMBL.smi', 'MOSES.smi']:
     data_path = os.path.join(test_path, data_set)
     elapsed_time = time_check(predictor, data_path, num_to_test)
