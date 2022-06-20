@@ -1,5 +1,5 @@
 # Synthesizability for Virtual Screening
-Scoring synthesizability of drug candidates using GAT model
+DFRscore: A Rapid Estimation of Synthetic Complexity for Virtual Screening Focusing on Drug-Relevant Reactions
 
 # Table of Contents
 - [Install Dependencies](#install-dependencies)
