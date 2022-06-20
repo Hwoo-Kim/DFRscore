@@ -24,7 +24,7 @@ use_cuda = sys.argv[2] == 'True'
 model_path = '/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
 test_path = f'/home/hwkim/DFRscore/data/retro_target_data/'
 
-num_to_test = 10
+num_to_test = 1000
 max_step = 4
 
 result_log_path = 'result.log'
