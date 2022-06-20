@@ -1,36 +1,36 @@
 #!/bin/bash
 
-#PBS -N MPNN_one_hundred
-#PBS -l nodes=gnode10:ppn=4:gpus=1:gpu2
+#PBS -N DFR
+#PBS -l nodes=gnode4:ppn=4:gpus=1:gpu1
 #PBS -l walltime=7:00:00:00 
 #PBS -o out.txt
 
 ##### Run ##### 
 date
 
-source activate SVS_A
+#source activate SVS_A
+source activate DFRscore
 
-cd ~/SVS
+cd ~/DFRscore
 
-data_dir=save/PubChem/mcule_selected/
-model_save_name=MPNN_test
+data_dir=save/PubChem/retro_result/
+model_save_name=DFRscore
 #data_preprocessing=no_additional_seed1024
-data_preprocessing=with_ring_inform_0.1
+data_preprocessing=basic_process
 
 # Training parameters
-# Not yet.
-num_data=25000
+num_data=250000
 num_epoch=200
-lr=0.0005
-batch_size=32
+lr=0.0004
+batch_size=128
 
 # To be changed.
-n_conv_layer=6
-n_fc_layer=3
-conv_dim=256
-fc_dim=128
-len_features=30
-#len_features=36
+n_conv_layer=5
+n_fc_layer=4
+conv_dim=512
+fc_dim=256
+#len_features=34
+len_features=36
 
 python train_model.py --data_dir $data_dir \
     --save_name $model_save_name \

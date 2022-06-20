@@ -1,9 +1,9 @@
-import torch
-from torch.utils.data import Dataset
-import numpy as np
 import pickle
 import os
+import torch
+from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence as pad
+import numpy as np
 
 class TrainDataset():
     def __init__(self,data_dir, key_dir, mode):
@@ -25,18 +25,20 @@ class TrainDataset():
         return data
 
 class InferenceDataset():
-    def __init__(self, features, adjs):
+    def __init__(self, features, adjs, N_atoms):
         super().__init__()
         self.features = features
         self.adjs = adjs
+        self.N_atoms = N_atoms
 
     def __len__(self):
-        return int(self.features.shape[0])
+        return len(self.features)
 
     def __getitem__(self,idx):
         data = dict()
         data['feature'] = self.features[idx]
         data['adj'] = self.adjs[idx]
+        data['N_atom'] = self.N_atoms[idx]
         return data
 
 def gat_collate_fn(batch):
@@ -62,4 +64,26 @@ def gat_collate_fn(batch):
     sample['adj']=torch.stack(adj_batch,0)
     sample['feature']=pad(node_batch,batch_first=True,padding_value=0.0)
     sample['label']=torch.tensor(label_batch)
+    return sample        
+
+def infer_collate_fn(batch):
+    # adjacency: [N,N]
+    # node_feature: [N,node]
+    sample = dict()
+    adj_batch=[]
+    node_batch=[]
+
+    max_num_atom = np.max(np.array([b['N_atom'] for b in batch]))
+    node_dim = batch[0]['feature'].size(-1)
+    for b in batch:
+        num_atoms = b['feature'].size(0)
+
+        adj = torch.zeros((max_num_atom,max_num_atom))
+        adj[:num_atoms, :num_atoms] = b['adj']
+        adj_batch.append(adj)
+
+        node_batch.append(b['feature'])
+
+    sample['adj']=torch.stack(adj_batch,0)
+    sample['feature']=pad(node_batch,batch_first=True,padding_value=0.0)
     return sample        

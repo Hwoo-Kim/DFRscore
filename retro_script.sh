@@ -3,17 +3,17 @@
 #PBS -N GGM_250k_11000
 #PBS -l nodes=cnode17:ppn=16
 #PBS -l walltime=7:00:00:00
-#PBS -o /home/hwkim/SVS/save/out.out
-#PBS -e /home/hwkim/SVS/save/error.txt
+#PBS -o /home/hwkim/DFRscore/save/out.out
+#PBS -e /home/hwkim/DFRscore/save/error.txt
 
 ##### Run ##### 
 
 date
 
-source activate SVS
-conda activate SVS
+source activate DFRscore
+conda activate DFRscore
 
-cd ~/SVS
+cd ~/DFRscore
 
 retro_target=data/retro_target_data/GGM.smi
 #retro_target=data/SCscore_case_study/false_pos.smi

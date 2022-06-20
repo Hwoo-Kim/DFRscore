@@ -19,6 +19,7 @@ RDLogger.DisableLog('rdApp.*')
 
 
 class logger():
+
     def __init__(self, log_file_path):
         self.log_file = log_file_path
         try:
@@ -39,15 +40,20 @@ class logger():
         if save_log:
             self.save(log, end=end)
 
+    @classmethod
+    def get_skip_args(cls):
+        return ['logger', 'root', 'save_name', 'preprocess_dir', 'preprocess_logger', 'data_dir', 'save_dir']
+
     def save(self, log, end):
         with open(self.log_file, 'a') as w :
             w.write(log+end)
 
     def log_arguments(self, args):
         d = vars(args)
+        _skip_args = self.get_skip_args()
         for v in d:
-            if v=='logger' or v=='root' or v=='save_dir' or v=='save_name': continue
-            self(f'  {v}: {d[v]}')
+            if not v in _skip_args: 
+                self(f'  {v}: {d[v]}')
 
 def retro_save_dir_setting(root, args):
     target_data_name = args.retro_target.split('/')[-1].split('.smi')[0]

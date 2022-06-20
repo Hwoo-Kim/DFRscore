@@ -1,9 +1,8 @@
 import sys, os
 import pickle
 from multiprocessing import Pool
-sys.path.append(f'{os.path.abspath(os.path.dirname(__file__))}')
+from .metrics import BinaryConfusionMatrix, UnbalMultiConfusionMatrix, get_AUROC
 sys.path.append(f'{os.path.dirname(os.path.abspath(os.path.dirname(__file__)))}')
-from metrics import BinaryConfusionMatrix, UnbalMultiConfusionMatrix, get_AUROC
 from getScores import getSCScore, getSAScore, rescale_score
 
 import numpy as np

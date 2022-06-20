@@ -1,6 +1,7 @@
 from rdkit import Chem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
+from rdkit.Chem.rdchem import ChiralType
 from multiprocessing import Queue, Process,current_process
 import numpy as np
 import queue
@@ -11,7 +12,6 @@ import random
 import time
 from datetime import datetime
 
-BOND_TYPES=[Chem.rdchem.BondType.SINGLE, Chem.rdchem.BondType.DOUBLE, Chem.rdchem.BondType.TRIPLE, Chem.rdchem.BondType.AROMATIC]
 DATA_SPLIT_SEED = 1024
 PROBLEM = 'regression'
 # 1. Data splitting functions
@@ -134,7 +134,7 @@ def generate_keys(processed_data_dir, preprocess_dir, ratio, class_sizes):
 
 
 # 2. Graph feature generating functions
-def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
+def do_get_graph_feature(tasks,save_dir, batch_size):
     while True:
         try:
             args = tasks.get(timeout=1)
@@ -144,8 +144,6 @@ def do_get_graph_feature(tasks,save_dir,max_num_atoms,len_features, batch_size):
             data_list, task_idx = args[0], args[1]
             get_graph_feature(data_list,
                     save_dir,
-                    max_num_atoms,
-                    len_features,
                     batch_size,
                     task_idx 
                     )
@@ -216,11 +214,11 @@ def get_node_feature(atom):
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
+                    #one_of_k_encoding(atom.GetChiralTag(),[ChiralType.CHI_UNSPECIFIED, ChiralType.CHI_TETRAHEDRAL_CCW, ChiralType.CHI_TETRAHEDRAL_CW, 'ELSE'])+
                     [atom.GetIsAromatic()])
                     # 11+6+6+6+1 = 30
-
-def get_edge_feature(bond):
-    return np.array(one_of_k_encoding(bond.GetBondType(), BOND_TYPES))
+                    # 11+6+6+4+1 = 28
+                    # 11+6+6+1 = 24
 
 # 3. Main functions
 def train_data_preprocess(args):
@@ -247,8 +245,6 @@ def train_data_preprocess(args):
     since = time.time()
     # Creating Tasks
     for batch_idx in range(num_batch):
-        #indices = list(range(batch_size*batch_idx, batch_size*(batch_idx+1)))
-        #task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], indices)
         task = (labeled_data[batch_size*batch_idx:batch_size*(batch_idx+1)], batch_idx)
         tasks.put(task)
 
@@ -256,7 +252,7 @@ def train_data_preprocess(args):
     for p_idx in range(args.num_cores):
         p = Process(
                 target=do_get_graph_feature,
-                args=(tasks,save_dir,args.max_num_atoms,args.len_features, batch_size)
+                args=(tasks,save_dir, batch_size)
                 )
         procs.append(p)
         p.start()
@@ -277,5 +273,3 @@ def train_data_preprocess(args):
 if __name__=='__main__':
     mol = Chem.MolFromSmiles('CC=CO')
     bonds = mol.GetBonds() 
-    for bond in bonds:
-        print(get_edge_feature(bond))

@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from scripts.modelScripts.model import DFRscore
-from scripts.modelScripts.data import TrainDataset, gat_collate_fn
-import scripts.utils as utils
+from .model import DFRscore
+from .data import TrainDataset, gat_collate_fn
 
 import numpy as np
 import pickle
@@ -105,8 +104,8 @@ def train_DFRscore(args):
     lr = args.lr
 
     log('  ----- Train Config Information -----')
-    #log(f' data dir: {data_dir}')
-    log(f'  save_dir: {save_dir}')
+    log(f'  save_dir: {args.save_dir}')
+    log(f'  data dir: {args.data_dir}')
     log.log_arguments(args)
     log()
     log('  ----- Training Log -----')
@@ -118,20 +117,21 @@ def train_DFRscore(args):
                     batch_size=args.batch_size,
                     shuffle = True,
                     collate_fn=gat_collate_fn,
-                    num_workers=2
+                    num_workers=int(args.num_threads)
                     )
     val_data_loader = DataLoader(
                     TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='val'),
                     batch_size=args.batch_size,
                     shuffle = False,
-                    collate_fn=gat_collate_fn
+                    collate_fn=gat_collate_fn,
+                    num_workers=int(args.num_threads)
                     )
-    test_data_loader = DataLoader(
-                    TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
-                    batch_size=args.batch_size,
-                    shuffle = False,
-                    collate_fn=gat_collate_fn
-                    )
+    #test_data_loader = DataLoader(
+    #                TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
+    #                batch_size=args.batch_size,
+    #                shuffle = False,
+    #                collate_fn=gat_collate_fn
+    #                )
 
     train_loss_history = []
     val_loss_history = []

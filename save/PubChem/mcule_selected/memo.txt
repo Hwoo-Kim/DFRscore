@@ -1,2 +1,0 @@
-Data were randomly selected.
-Total number of data = 250,000

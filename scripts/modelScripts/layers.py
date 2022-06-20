@@ -5,19 +5,39 @@ import torch.nn.functional as F
 from rdkit import Chem
 from rdkit.Chem import rdmolops
 
+class FeedForward(nn.Module):
+    def __init__(self, in_dim, out_dim, hidden_dims,dropout):
+        super().__init__()
+        self.num_hidden = len(hidden_dims)
+        self.fcs = nn.ModuleList()
+        for i in range(self.num_hidden+1):
+            if i ==0: self.fcs.append(nn.Linear(in_dim,hidden_dims[i]))
+            elif i==self.num_hidden: self.fcs.append(nn.Linear(hidden_dims[-1],out_dim))
+            else: self.fcs.append(nn.Linear(hidden_dims[i-1],hidden_dims[i]))
+        self.act = nn.ReLU()
+        self.dropout = dropout
+
+    def forward(self, x):
+        for layer in self.fcs[:-1]:
+            x = self.act(layer(x))
+            if self.dropout: x = self.dropout(x)
+        x = self.fcs[-1](x)
+        return x
+
 class GraphAttentionLayer(nn.Module):
-    def __init__(self, emb_dim, num_heads, alpha=0.2,bias=True):
+    def __init__(self, emb_dim, num_heads, alpha=0.2,bias=True, dropout=nn.Dropout(p=0.2)):
         super().__init__()
 
-        assert emb_dim % num_heads == 0
+        assert emb_dim % num_heads == 0, "For GAT layer, emb_dim must be dividable by num_heads."
         self.emb_dim = emb_dim
         self.num_heads = num_heads
         self.alpha = alpha
         self.bias = bias
         self.leakyrelu=nn.LeakyReLU(negative_slope=alpha)
-        self.elu = nn.ELU()
+        self.act = nn.ReLU()
         self.W = nn.Linear(emb_dim, emb_dim, bias=self.bias)     # each W_k = [emb_dim, emb_dim/num_heads]
         self.a= nn.Linear(emb_dim, 2*num_heads, bias=self.bias)
+        self.dropout = dropout
 
     def forward(self, x, A):
         Wh = self.W(x)                      # [B,N,F]
@@ -30,8 +50,9 @@ class GraphAttentionLayer(nn.Module):
         attention = torch.softmax(att_coeff, dim=-1)                # [B,H,N,N]
         attention = self.nan_to_num(attention)
         retval = torch.matmul(attention,Wh)                         # [B,H,N,F/H]
-        retval = self.elu(self.restore(retval))
-        return retval
+        retval = self.restore(retval)
+        if self.dropout: retval = self.dropout(retval)
+        return self.act(retval)
 
     def transform(self, tensor):
         # input: [B,N,F] -> output: [B,H,N,F/H]
