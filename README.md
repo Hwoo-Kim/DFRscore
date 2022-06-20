@@ -11,7 +11,7 @@ DFRscore: A Rapid Estimation of Synthetic Complexity for Virtual Screening Focus
 - [Using trained model as a scoring metric for VS](#using-trained-model-as-a-scoring-metric-for-vs)
 
 ## Install Dependencies
-SVS needs conda environment. After installing [conda](https://www.anaconda.com/),   
+DFRscore needs conda environment. After installing [conda](https://www.anaconda.com/),   
 you can manually install the required pakages as follows:
 - rdkit=2020.09.1
 - matplotlib
@@ -24,7 +24,7 @@ Or simply you can install the required packages by running
 ```
 ./dependencies
 ```
-This will configure a new conda environment named 'SVS'.
+This will configure a new conda environment named 'DFRscore'.
 
 ## Download Data
 1. If you ONLY want to train the SVS model without retro-analysis, you can download the data for training with:   
@@ -67,6 +67,6 @@ python ./test_model.py
 ```
 
 ## Using trained model as a scoring metric for VS
-Useful functions are described in ```SVS``` class in ```scripts/modelScripts/model.py``` file.
+Useful functions are described in ```DFRscore``` class in ```scripts/modelScripts/model.py``` file.
 
-For a fast test, you can simply run ```python getSVS.py --model_dir <path_to_model_dir> --smi <SMILES>```
+For a fast test, you can simply run ```python getDFRscore.py --model_dir <path_to_model_dir> --smi <SMILES>```
