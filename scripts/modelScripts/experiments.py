@@ -10,22 +10,22 @@ import csv
 
 
 def runExp01(predictor,
-        max_step,
         save_dir,
         test_file_path,
         logger,
-        each_class_sizes=None,
-        num_cores=4
+        each_class_sizes=None
         ):
     '''
     Arguments:
-      predictor: SVS object already restored by trained model.
+      predictor: DFRscore object already restored by trained model.
       num_class: the number of classes. equals to max_step+1.
       test_smi_list: list of list. [neg, pos1, pos2, ...]
         length = num_class
         Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
       save_dir: the directory where evaluation result will be saved.
     '''
+    max_step = predictor.max_step
+    num_cores = predictor.num_cores
     # 0. reading test files
     if each_class_sizes is None:
         each_class_sizes = [None for i in range(max_step+1)]
@@ -74,7 +74,7 @@ def runExp01(predictor,
         else:
             logger(f'  Pos{step}: {each_class_sizes[step]}')
 
-    # 2-1. get scores SA score, SC score, and SVS
+    # 2-1. get scores SA score, SC score, and DFRscore
     # SA score and SC score were already rescaled into [0, 1].
     logger('\n  Calculating scores...')
     logger('  calculating SA score... (not rescaled!)', end='\t')
@@ -89,8 +89,8 @@ def runExp01(predictor,
     logger('  calculating SC score... (not rescaled!)', end='\t')
     SCScores = getSCScore(test_smi_list)
     logger('  Done.')
-    logger('  calculating SVS...', end='\t')
-    SVSs = predictor.smiListToScores(test_smi_list)
+    logger('  calculating DFRscore...', end='\t')
+    DFRs = predictor.smiListToScores(test_smi_list)
     logger('  Done.')
 
     # 2-2. Setting for BCC test.
@@ -105,17 +105,17 @@ def runExp01(predictor,
     # 2-2. Use our model as as binary classification model.
     # Threshold must be max_step+0.5
     threshold = max_step+0.5
-    bin_label_list = (SVSs<threshold).astype(int)
+    bin_label_list = (DFRs<threshold).astype(int)
 
     # 2-3. Confusion matrix and evaluate metrics
     logger('\n  ----- BCC Evaluation -----')
     bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
-    logger('  1. Our model(SVS)')
+    logger('  1. Our model(DFR)')
     bin_acc, bin_prec, bin_recall, bin_critical_err = \
             bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
     logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
     logger(f'    {bin_acc}, {bin_prec}, {bin_recall},{bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, -1*np.array(SVSs)))
+    logger(get_AUROC(true_label_list, -1*np.array(DFRs)))
     logger('    auroc was calculated by reversed score.')
 
     # 2-4. SA score and SC score
@@ -133,28 +133,28 @@ def runExp01(predictor,
         true_label_list += [idx for i in range(l)]
     true_label_list = np.array(true_label_list)
 
-    SVSs_for_each_class = dict()
+    DFRs_for_each_class = dict()
     SAScores_for_each_class = dict()
     SCScores_for_each_class = dict()
     index = 0
     for i in range(len(each_class_sizes)):
         n = each_class_sizes[i]
         key = str(i)
-        SVSs_for_each_class[key] = SVSs[index:index + n]
+        DFRs_for_each_class[key] = DFRs[index:index + n]
         SAScores_for_each_class[key] = SAScores[index:index + n]
         SCScores_for_each_class[key] = SCScores[index:index + n]
         index += n
     datas = dict()
     datas['sa'] = SAScores_for_each_class
     datas['sc'] = SCScores_for_each_class
-    datas['svs'] = SVSs_for_each_class
+    datas['dfr'] = DFRs_for_each_class
 
     # Save pickle files
     with open(os.path.join(save_dir,'scores.pkl'),'wb') as f:
         pickle.dump(datas,f)
 
     logger('\n  ----- MCC Evaluation -----')
-    pred_label_list = np.around(np.where(SVSs>max_step+1, max_step+1, SVSs))
+    pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
     pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
     MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
     mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
@@ -184,20 +184,20 @@ def runExp01(predictor,
     return True
 
 def runExp03(predictor,
-        max_step, 
         save_dir, 
         test_file_path,
         logger
         ):
     '''
     Arguments:
-      predictor: SVS object already restored by trained model.
+      predictor: DFRscore object already restored by trained model.
       num_class: the number of classes. equals to max_step+1.
       test_smi_list: list of list. [neg, pos1, pos2, ...]
         length = num_class
         Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
       save_dir: the directory where evaluation result will be saved.
     '''
+    max_step = predictor.max_step
     # 0. reading test files
     each_class_sizes = []
     test_smi_list, true_smis, false_smis = [], [], []
@@ -229,10 +229,10 @@ def runExp03(predictor,
         else:
             logger(f'  Pos{step}: {each_class_sizes[step]}')
 
-    # 2-1. get scores, SVS
+    # 2-1. get scores, DFR
     logger('\n  Calculating scores...')
-    logger('  calculating SVS...', end='\t')
-    SVSs = predictor.smiListToScores(test_smi_list)
+    logger('  calculating DFR...', end='\t')
+    DFRs = predictor.smiListToScores(test_smi_list)
     logger('  Done.')
 
     # 2-2. Setting for BCC test.
@@ -247,7 +247,7 @@ def runExp03(predictor,
     # 2-2. Use our model as as binary classification model.
     # Threshold must be max_step+0.5
     threshold = max_step+0.5
-    bin_label_list = (SVSs<threshold).astype(int)
+    bin_label_list = (DFRs<threshold).astype(int)
 
     # 2-3. Confusion matrix and evaluate metrics
     logger('\n  ----- BCC Evaluation -----')
@@ -258,7 +258,7 @@ def runExp03(predictor,
             bin_conf_matrix.get_initial_pos_ratio(), bin_conf_matrix.get_ratio_change(), bin_conf_matrix.get_filtering_ratio()
     logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
     logger(f'    {bin_acc}, {bin_prec}, {bin_recall}, {bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, SVSs))
+    logger(get_AUROC(true_label_list, DFRs))
     logger('   Init_pos_ratio, Ratio_change =')
     logger(f'    {init_pos_ratio}, {ratio_change}')
     logger('   filtering_ratio =')
@@ -271,7 +271,7 @@ def runExp03(predictor,
     true_label_list = np.array(true_label_list)
 
     logger('\n  ----- MCC Evaluation -----')
-    pred_label_list = np.around(np.where(SVSs>max_step+1, max_step+1, SVSs))
+    pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
     pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
     MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
     mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \

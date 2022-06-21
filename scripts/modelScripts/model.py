@@ -90,13 +90,15 @@ class DFRscore(nn.Module):
         self.__dict__.update(args)
 
     @classmethod
-    def from_trained_model(cls, **kwargs):
+    def from_trained_model(cls, *args, **kwargs):
         model = cls()
         for key in kwargs:
             if not key in model.__dict__:
                 raise KeyError(f'{key} is an unknown key.')
         if 'path_to_model' in kwargs:
             model.restore(kwargs['path_to_model'])
+        if args:
+            model.restore(args[0])
         model.__dict__.update(kwargs)
         return model
 
@@ -248,6 +250,31 @@ class DFRscore(nn.Module):
         scores = torch.cat(scores).squeeze(-1)
         scores = torch.where(scores.isnan(), torch.tensor(float(self.max_step+1)), scores)
         return scores.numpy()
+    
+    def filterWithScore(self, data_list, criteria):
+        """
+        Args:
+          data_list: list of SMILES or rdchem.Mol.
+          criteria: refine within what stpes(scalar value).
+        Returns:
+          passed_data: list of passed SMILES or rdchem.Mol.
+          passed_idx: list of passed indice.
+        """
+        if type(data_list[0]) == str:
+            scores = self.smiListToScores(data_list)
+        elif isinstance(data_list[0], Chem.rdchem.Mol):
+            scores = self.molListToScores(data_list)
+        else:
+            raise TypeError(f'Given data is neither SMILES or rdchem.Mol object.')
+
+        bPassed= scores < criteria + 0.5
+        passed_data, passed_idx = [], []
+        for i, data in enumerate(data_list):
+            if bPassed[i]:
+                passed_data.append(data)
+                passed_idx.append(i)
+
+        return passed_data, passed_idx
 
     def cuda(self):
         _DFR = super().cuda()
