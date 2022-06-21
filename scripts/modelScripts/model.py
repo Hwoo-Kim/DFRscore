@@ -17,50 +17,37 @@ from .data import InferenceDataset, infer_collate_fn
 
 class DFRscore(nn.Module):
     """
-    Model to predict synthesizability for virtual screening.
+    Model to estimate synthetic complexity for large-scale virtual screening.
     You can select which model to load using 'restore' method.
       (It needs path to model state_dict file)
-    If you want to get DFRscore using this model,
-      1) model = DFRscore(args)  (if you have CUDA system, you can use model=DFRscore(args).cuda())
-      2-1) From SMILES string:
+
+    To get score using this class,
+      1. model = DFRscore(args)  (if you have CUDA system, you can use model=DFRscore(args).cuda())
+      2. model.restore(<path_to_model>)
+      3-1. From SMILES string:
         score = model.smiToScore(<SMILES>) / scores = model.smiListToScores(<list of SMILES>)
-      2-2) From RDKit Molecule object:
+      3-2. From RDKit Molecule object:
         score = model.molToScore(<Molecule object>) / scores = model.molListToScores(<list of Molecule objects>)
     """
     _CONV_DIM = 512
     _FC_DIM = 256
     _NUM_GAT_LAYER = 5
     _NUM_FC_LAYER = 4
-    _NUM_HEADS= 8
+    _NUM_HEADS = 8
     _LEN_FEATURES = 36
     _MAX_STEP = 4
     _NUM_CORES = 4
+    _OUT_DIM = 1
+    _DROP_OUT = 0
+    _PATH_TO_MODEL = 'Not restored'
 
-    def __init__(
-            self,
-            conv_dim=_CONV_DIM,
-            fc_dim=_FC_DIM,
-            n_GAT_layer=_NUM_GAT_LAYER,
-            n_fc_layer=_NUM_FC_LAYER,
-            num_heads=_NUM_HEADS,
-            len_features=_LEN_FEATURES,
-            max_step=_MAX_STEP,
-            num_cores=_NUM_CORES,
-            dropout:float=0
-            ):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.conv_dim = conv_dim
-        self.fc_dim = fc_dim
-        self.n_GAT_layer = n_GAT_layer
-        self.n_fc_layer = n_fc_layer
-        self.num_heads = num_heads
-        self.len_features = len_features
-        self.max_step = max_step
-        self.num_cores = num_cores
-        self.out_dim = 1
+        self._init_default_setting()
+        self.__dict__.update(kwargs)
 
-        self.dropout = nn.Dropout(dropout)
-        self.embedding = nn.Linear(len_features,conv_dim, bias=False)
+        self.dropout = nn.Dropout(self.dropout)
+        self.embedding = nn.Linear(self.len_features, self.conv_dim, bias=False)
         self.GAT_layers=nn.ModuleList(
                 [GraphAttentionLayer(
                     emb_dim=self.conv_dim,
@@ -69,7 +56,7 @@ class DFRscore(nn.Module):
                     bias=True,
                     dropout=self.dropout
                     )
-                    for i in range(n_GAT_layer)]
+                    for i in range(self.n_GAT_layer)]
                 )
 
         self.dense = FeedForward(
@@ -81,12 +68,37 @@ class DFRscore(nn.Module):
         #self.relu = nn.ReLU()
         self.elu = nn.ELU()
         self.softmax = nn.Softmax(dim=-1)
-        self.path_to_model = 'Not restored'
         self.device = torch.device('cpu')
 
         # zero vectors
         self._zero_node_feature = torch.zeros((1,self.len_features))*torch.tensor(float('nan'))
         self._zero_adj = torch.zeros((1,1))
+
+    def _init_default_setting(self):
+        args = {'conv_dim': self._CONV_DIM,
+                'fc_dim': self._FC_DIM,
+                'n_GAT_layer': self._NUM_GAT_LAYER,
+                'n_fc_layer': self._NUM_FC_LAYER,
+                'num_heads': self._NUM_HEADS,
+                'len_features': self._LEN_FEATURES,
+                'max_step': self._MAX_STEP,
+                'num_cores': self._NUM_CORES,
+                'out_dim': self._OUT_DIM,
+                'dropout': self._DROP_OUT,
+                'path_to_model': self._PATH_TO_MODEL}
+
+        self.__dict__.update(args)
+
+    @classmethod
+    def from_trained_model(cls, **kwargs):
+        model = cls()
+        for key in kwargs:
+            if not key in model.__dict__:
+                raise KeyError(f'{key} is an unknown key.')
+        if 'path_to_model' in kwargs:
+            model.restore(kwargs['path_to_model'])
+        model.__dict__.update(kwargs)
+        return model
 
     def forward(self, x, A):
         x = self.embedding(x)
@@ -132,7 +144,6 @@ class DFRscore(nn.Module):
             N_atoms.append(result[2])
         return_dict[worker] = (node_feats, adjs, N_atoms)
         return
-
 
     # TODO: Process implementation
     #def mols_to_graph_feature(self, mol_list):
@@ -227,7 +238,6 @@ class DFRscore(nn.Module):
                 shuffle=False, 
                 collate_fn=infer_collate_fn,
                 num_workers=0
-                #num_workers=self.num_cores
                 )
 
         scores = []
@@ -280,10 +290,5 @@ class DFRscore(nn.Module):
                 f'  device: {self.device}\n' + \
                 ')'
 if __name__ == '__main__':
-    l = [1,2,3,4,3,2,12,3,4,2]
-    result = DFRscore.get_all_indice(l,2)
-    print(result)
-    feat = torch.zeros((1,36))
-    adj = torch.zeros((1,1))
-    adj[:0,:0] = 1
-    print(adj)
+    model = DFRscore()
+    print(model)

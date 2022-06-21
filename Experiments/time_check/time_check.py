@@ -21,8 +21,8 @@ def time_check(model, file_path, num_to_test):
 num_cores = int(sys.argv[1])
 assert sys.argv[2] in ['True', 'False'], 'Neither True nor False!'
 use_cuda = sys.argv[2] == 'True'
-model_path = '/Users/hwkim/works/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
-test_path = f'/Users/hwkim/works/DFRscore/data/retro_target_data/'
+model_path = '/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
+test_path = f'/home/hwkim/DFRscore/data/retro_target_data/'
 
 num_to_test = 10000
 max_step = 4
@@ -32,8 +32,9 @@ log = logger(result_log_path)
 
 # 2. Model load
 log('----- Input config information -----')
-predictor = DFRscore(num_cores=num_cores)
-predictor.restore(model_path)
+log(f'num to test: {num_to_test}')
+predictor = DFRscore.from_trained_model(
+        num_cores=num_cores, path_to_model=model_path)
 if use_cuda: predictor = predictor.cuda()
 log(predictor)
 
