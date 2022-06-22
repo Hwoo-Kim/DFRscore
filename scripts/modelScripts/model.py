@@ -44,6 +44,9 @@ class DFRscore(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
         self._init_default_setting()
+        for key in kwargs:
+            if not key in self.__dict__:
+                raise KeyError(f'{key} is an unknown key.')
         self.__dict__.update(kwargs)
 
         self.dropout = nn.Dropout(self.dropout)
@@ -91,15 +94,13 @@ class DFRscore(nn.Module):
 
     @classmethod
     def from_trained_model(cls, *args, **kwargs):
-        model = cls()
-        for key in kwargs:
-            if not key in model.__dict__:
-                raise KeyError(f'{key} is an unknown key.')
+        if 'path_to_model' in kwargs and args:
+            raise Exception("'from_trained_model' method got 2 models.")
+        model = cls(**kwargs)
         if 'path_to_model' in kwargs:
             model.restore(kwargs['path_to_model'])
         if args:
             model.restore(args[0])
-        model.__dict__.update(kwargs)
         return model
 
     def forward(self, x, A):
