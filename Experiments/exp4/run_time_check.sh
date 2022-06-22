@@ -2,7 +2,7 @@
 
 #source activate DFRscore
 
-cd ~/DFRscore/Experiments/time_check
+cd ~/DFRscore/Experiments/exp4
 
 num_cores=4
 use_cuda=False
