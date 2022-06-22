@@ -1,5 +1,0 @@
-bin_acc,bin_precision,bin_recall,init_pos_ratio,ratio_change (pos:neg),critical_err,filtered_out_ratio_pos,filtered_out_ratio_neg,filtered_out_ratio_total
-0.848,0.282,0.698,0.073,7302:92698 >> 5100:12964,0.15200000000000002,0.302,0.86,0.819
-
-mcc_acc,macro_avg_precision,macro_avg_recall,macro_avg_f1_score
-0.813,0.358,0.404,0.38

@@ -3,8 +3,6 @@ from rdkit.Chem import MolFromSmiles as Mol
 from os.path import dirname
 sys.path.append(f'{dirname(dirname(os.path.abspath(dirname(__file__))))}')
 
-import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
 from scripts.modelScripts.model import DFRscore
 from scripts.utils import logger
 
@@ -24,7 +22,7 @@ num_cores = int(sys.argv[1])
 assert sys.argv[2] in ['True', 'False'], 'Neither True nor False!'
 use_cuda = sys.argv[2] == 'True'
 model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv5_dimFC128_dimConv256/Best_model_159.pt'
-model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv5_dimFC256_dimConv512/Best_model_118.pt'
+#model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv5_dimFC256_dimConv512/Best_model_118.pt'
 test_path = f'/home/hwkim/DFRscore/data/retro_target_data/'
 
 num_to_test = 10000
@@ -38,11 +36,10 @@ log('----- Input config information -----')
 log(f'num to test: {num_to_test}')
 predictor = DFRscore.from_trained_model(
         num_cores=num_cores, path_to_model=model_path,
-        fc_dim=256, conv_dim=256)
+        fc_dim=128, conv_dim=256)
 if use_cuda: predictor = predictor.cuda()
 log(predictor)
 
-exit()
 # 3. Get Evaluation Metrics
 log('----- Time check started -----')
 for data_set in ['ZINC.smi', 'ChEMBL.smi', 'MOSES.smi']:

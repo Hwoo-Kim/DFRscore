@@ -14,14 +14,16 @@ class FeedForward(nn.Module):
             if i ==0: self.fcs.append(nn.Linear(in_dim,hidden_dims[i]))
             elif i==self.num_hidden: self.fcs.append(nn.Linear(hidden_dims[-1],out_dim))
             else: self.fcs.append(nn.Linear(hidden_dims[i-1],hidden_dims[i]))
-        self.act = nn.ReLU()
+        #self.act = nn.ReLU()
+        #self.act = nn.ELU()
+        self.act = nn.SiLU()
         self.dropout = dropout
 
     def forward(self, x):
         for layer in self.fcs[:-1]:
             x = self.act(layer(x))
             if self.dropout: x = self.dropout(x)
-        x = self.fcs[-1](x)
+        x = self.fcs[-1](x) # prediction layer
         return x
 
 class GraphAttentionLayer(nn.Module):
@@ -34,7 +36,9 @@ class GraphAttentionLayer(nn.Module):
         self.alpha = alpha
         self.bias = bias
         self.leakyrelu=nn.LeakyReLU(negative_slope=alpha)
-        self.act = nn.ReLU()
+        #self.act = nn.ReLU()
+        #self.act = nn.ELU()
+        self.act = nn.SiLU()
         self.W = nn.Linear(emb_dim, emb_dim, bias=self.bias)     # each W_k = [emb_dim, emb_dim/num_heads]
         self.a= nn.Linear(emb_dim, 2*num_heads, bias=self.bias)
         self.dropout = dropout
@@ -50,9 +54,9 @@ class GraphAttentionLayer(nn.Module):
         attention = torch.softmax(att_coeff, dim=-1)                # [B,H,N,N]
         attention = self.nan_to_num(attention)
         retval = torch.matmul(attention,Wh)                         # [B,H,N,F/H]
-        retval = self.restore(retval)
+        retval = self.act(self.restore(retval))
         if self.dropout: retval = self.dropout(retval)
-        return self.act(retval)
+        return retval
 
     def transform(self, tensor):
         # input: [B,N,F] -> output: [B,H,N,F/H]

@@ -1,7 +1,8 @@
-import multiprocessing as mp
 import torch
 import torch.nn as nn
+import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
+mp.set_sharing_strategy('file_system')
 import numpy as np
 np.set_printoptions(suppress=True)
 import time
@@ -68,7 +69,6 @@ class DFRscore(nn.Module):
                 hidden_dims=[self.fc_dim]*(self.n_fc_layer-1),
                 dropout=self.dropout
                 )
-        #self.relu = nn.ReLU()
         self.elu = nn.ELU()
         self.softmax = nn.Softmax(dim=-1)
         self.device = torch.device('cpu')
@@ -119,7 +119,8 @@ class DFRscore(nn.Module):
             self.load_state_dict(torch.load(path_to_model))
         self.path_to_model = path_to_model
 
-    def mol_to_graph_feature(self, mol):
+    @staticmethod
+    def mol_to_graph_feature(mol):
         if mol:
             num_atoms = mol.GetNumAtoms()
 
@@ -136,53 +137,7 @@ class DFRscore(nn.Module):
             node_feature = torch.from_numpy(node_feature).bool()
             return node_feature, adj, num_atoms
         else:
-            return self._zero_node_feature, self._zero_adj, 0
-
-    def do_mols_to_graph_feature(self, mol_list, worker, return_dict):
-        node_feats , adjs, N_atoms = [], [], []
-        for mol in mol_list:
-            result = self.mol_to_graph_feature(mol)
-            node_feats.append(result[0])
-            adjs.append(result[1])
-            N_atoms.append(result[2])
-        return_dict[worker] = (node_feats, adjs, N_atoms)
-        return
-
-    # TODO: Process implementation
-    #def mols_to_graph_feature(self, mol_list):
-    #    """
-    #    Args:
-    #      mol_list: list of RDKit molecule objects.
-    #    Returns: 
-    #      node_feats: torch tensor
-    #      adjs: torch tensor
-    #      N_atoms: list
-    #    """
-    #    print('Mol To Graph Feature')
-    #    t1 = time.time()
-    #    num_mols = len(mol_list)
-    #    batch_size = num_mols//self.num_cores
-    #    if batch_size*self.num_cores!=num_mols: batch_size+=1
-
-    #    manager = mp.Manager()
-    #    return_dict = manager.dict()
-    #    procs = []
-    #    for worker in range(self.num_cores):
-    #        p = mp.Process(target=self.do_mols_to_graph_feature, args=(mol_list[batch_size*worker:batch_size*(worker+1)], worker, return_dict))
-    #        procs.append(p)
-    #        p.start()
-
-    #    for p in procs:
-    #        p.join()
-    #    print(f'Fin {time.time()-t1}')
-
-    #    node_feats , adjs, N_atoms = [], [], []
-    #    for node_feature, adj, num_atoms in list(return_dict.values()):
-    #        node_feats += node_feature
-    #        adjs += adj
-    #        N_atoms += num_atoms
-
-    #    return node_feats, adjs, N_atoms
+            return None, None, None
 
     def mols_to_graph_feature(self, mol_list):
         """
@@ -202,9 +157,14 @@ class DFRscore(nn.Module):
 
         node_feats , adjs, N_atoms = [], [], []
         for node_feature, adj, num_atoms in result:
-            node_feats.append(node_feature)
-            adjs.append(adj)
-            N_atoms.append(num_atoms)
+            if node_feature == None:
+                node_feats.append(self._zero_node_feature)
+                adjs.append(self._zero_adj)
+                N_atoms.append(0)
+            else:
+                node_feats.append(node_feature)
+                adjs.append(adj)
+                N_atoms.append(num_atoms)
 
         return node_feats, adjs, N_atoms
 
@@ -317,6 +277,4 @@ class DFRscore(nn.Module):
                 f'  dropout: {self.dropout}\n' + \
                 f'  device: {self.device}\n' + \
                 ')'
-if __name__ == '__main__':
-    model = DFRscore()
-    print(model)
+

@@ -88,7 +88,6 @@ def train_DFRscore(args):
             n_fc_layer=args.n_fc_layer,
             num_heads=args.num_heads,
             len_features=args.len_features,
-            max_num_atoms=args.max_num_atoms,
             max_step=args.max_step,
             dropout=args.dropout)
     predictor.cuda()
