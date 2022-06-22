@@ -236,67 +236,70 @@ def runExp03(predictor,
     logger('  Done.')
 
     # 2-2. Setting for BCC test.
-    true_label_list = []
-    for idx, l in enumerate(each_class_sizes):
-        if idx ==0:
-            true_label_list += [0 for i in range(l)]
-        else:
-            true_label_list += [1 for i in range(l)]
-    true_label_list = np.array(true_label_list)
+    M = max_step
+    for max_step in range(1, M+1):
+        logger("current:", max_step)
+        true_label_list = []
+        for idx, l in enumerate(each_class_sizes):
+            if idx ==0 or idx > max_step:
+                true_label_list += [0 for i in range(l)]
+            else:
+                true_label_list += [1 for i in range(l)]
+        true_label_list = np.array(true_label_list)
 
-    # 2-2. Use our model as as binary classification model.
-    # Threshold must be max_step+0.5
-    threshold = max_step+0.5
-    bin_label_list = (DFRs<threshold).astype(int)
+        # 2-2. Use our model as as binary classification model.
+        # Threshold must be max_step+0.5
+        threshold = max_step+0.5
+        bin_label_list = (DFRs<threshold).astype(int)
 
-    # 2-3. Confusion matrix and evaluate metrics
-    logger('\n  ----- BCC Evaluation -----')
-    bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
-    bin_acc, bin_prec, bin_recall, bin_critical_err = \
-            bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
-    init_pos_ratio, ratio_change, filtering_ratio, = \
-            bin_conf_matrix.get_initial_pos_ratio(), bin_conf_matrix.get_ratio_change(), bin_conf_matrix.get_filtering_ratio()
-    logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
-    logger(f'    {bin_acc}, {bin_prec}, {bin_recall}, {bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, DFRs))
-    logger('   Init_pos_ratio, Ratio_change =')
-    logger(f'    {init_pos_ratio}, {ratio_change}')
-    logger('   filtering_ratio =')
-    logger(f"    Pos: {filtering_ratio['pos']}, Neg: {filtering_ratio['neg']}, Total: {filtering_ratio['tot']}")
+        # 2-3. Confusion matrix and evaluate metrics
+        logger('\n  ----- BCC Evaluation -----')
+        bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
+        bin_acc, bin_prec, bin_recall, bin_critical_err = \
+                bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
+        init_pos_ratio, ratio_change, filtering_ratio, = \
+                bin_conf_matrix.get_initial_pos_ratio(), bin_conf_matrix.get_ratio_change(), bin_conf_matrix.get_filtering_ratio()
+        logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
+        logger(f'    {bin_acc}, {bin_prec}, {bin_recall}, {bin_critical_err}', end=', ')
+        #logger(get_AUROC(true_label_list, DFRs))
+        logger('   Init_pos_ratio, Ratio_change =')
+        logger(f'    {init_pos_ratio}, {ratio_change}')
+        logger('   filtering_ratio =')
+        logger(f"    Pos: {filtering_ratio['pos']}, Neg: {filtering_ratio['neg']}, Total: {filtering_ratio['tot']}")
 
-    # 3. Setting for MCC test.
-    true_label_list = []
-    for idx, l in enumerate(each_class_sizes):
-        true_label_list += [idx for i in range(l)]
-    true_label_list = np.array(true_label_list)
+        ## 3. Setting for MCC test.
+        #true_label_list = []
+        #for idx, l in enumerate(each_class_sizes):
+        #    true_label_list += [idx for i in range(l)]
+        #true_label_list = np.array(true_label_list)
 
-    logger('\n  ----- MCC Evaluation -----')
-    pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
-    pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
-    MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
-    mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
-        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
-    logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
-    logger(f'   {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
+        #logger('\n  ----- MCC Evaluation -----')
+        #pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
+        #pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
+        #MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
+        #mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
+        #    MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
+        #logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
+        #logger(f'   {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
 
-    mcc_result_dict = {
-            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision,'macro_avg_recall': macro_avg_recall, 'macro_avg_f1_score': macro_avg_f1_score
-            }
+        #mcc_result_dict = {
+        #        'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision,'macro_avg_recall': macro_avg_recall, 'macro_avg_f1_score': macro_avg_f1_score
+        #        }
 
-    bin_result_dict = {
-            'bin_acc': bin_acc, 'bin_precision': bin_prec, 'bin_recall': bin_recall,
-            'init_pos_ratio': init_pos_ratio, 'ratio_change (pos:neg)': ratio_change, 'critical_err': 1-bin_acc,
-            'filtered_out_ratio_pos': filtering_ratio['pos'],'filtered_out_ratio_neg': filtering_ratio['neg'],'filtered_out_ratio_total': filtering_ratio['tot']
-            }
+        bin_result_dict = {
+                'bin_acc': bin_acc, 'bin_precision': bin_prec, 'bin_recall': bin_recall,
+                'init_pos_ratio': init_pos_ratio, 'ratio_change (pos:neg)': ratio_change, 'critical_err': 1-bin_acc,
+                'filtered_out_ratio_pos': filtering_ratio['pos'],'filtered_out_ratio_neg': filtering_ratio['neg'],'filtered_out_ratio_total': filtering_ratio['tot']
+                }
 
-    with open(csv_file, 'w', newline='') as fw:
-        wr=csv.writer(fw)
-        wr.writerow(bin_result_dict.keys())
-        wr.writerow(bin_result_dict.values())
-        wr.writerow([])
-        wr.writerow(mcc_result_dict.keys())
-        wr.writerow(mcc_result_dict.values())
-    np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
-    np.savetxt(bin_array_file, bin_conf_matrix.conf_matrix, fmt='%.0f')
+        with open(csv_file, 'w', newline='') as fw:
+            wr=csv.writer(fw)
+            wr.writerow(bin_result_dict.keys())
+            wr.writerow(bin_result_dict.values())
+            wr.writerow([])
+        #    wr.writerow(mcc_result_dict.keys())
+        #    wr.writerow(mcc_result_dict.values())
+        #np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
+        np.savetxt(bin_array_file, bin_conf_matrix.conf_matrix, fmt='%.0f')
 
     return True
