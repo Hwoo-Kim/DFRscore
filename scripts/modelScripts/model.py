@@ -30,8 +30,8 @@ class DFRscore(nn.Module):
       3-2. From RDKit Molecule object:
         score = model.molToScore(<Molecule object>) / scores = model.molListToScores(<list of Molecule objects>)
     """
-    _CONV_DIM = 512
-    _FC_DIM = 256
+    _CONV_DIM = 256
+    _FC_DIM = 128
     _NUM_GAT_LAYER = 5
     _NUM_FC_LAYER = 4
     _NUM_HEADS = 8
@@ -50,15 +50,14 @@ class DFRscore(nn.Module):
                 raise KeyError(f'{key} is an unknown key.')
         self.__dict__.update(kwargs)
 
-        self.dropout = nn.Dropout(self.dropout)
+        self.dropout_layer = nn.Dropout(self.dropout)
         self.embedding = nn.Linear(self.len_features, self.conv_dim, bias=False)
         self.GAT_layers=nn.ModuleList(
                 [GraphAttentionLayer(
                     emb_dim=self.conv_dim,
                     num_heads=self.num_heads,
                     alpha=0.2,
-                    bias=True,
-                    dropout=self.dropout
+                    bias=True
                     )
                     for i in range(self.n_GAT_layer)]
                 )
@@ -69,8 +68,8 @@ class DFRscore(nn.Module):
                 hidden_dims=[self.fc_dim]*(self.n_fc_layer-1),
                 dropout=self.dropout
                 )
+        self.relu = nn.ReLU()
         self.elu = nn.ELU()
-        self.softmax = nn.Softmax(dim=-1)
         self.device = torch.device('cpu')
 
         # zero vectors
@@ -105,9 +104,15 @@ class DFRscore(nn.Module):
 
     def forward(self, x, A):
         x = self.embedding(x)
+        # convolution
         for layer in self.GAT_layers:
             x = layer(x, A)
-        x = x.mean(1)
+            x = self.dropout_layer(x)
+
+        # readout
+        x = self.readout(x, A)
+
+        # feedforward
         x = self.dense(x)
         retval = self.elu(x).squeeze(-1)+1.5
         return retval
@@ -119,6 +124,21 @@ class DFRscore(nn.Module):
             self.load_state_dict(torch.load(path_to_model))
         self.path_to_model = path_to_model
 
+    def readout(self, x, A):
+        weighted_mask = self.get_mask(A)
+        x = torch.mul(x,weighted_mask)
+        x = x.sum(1)
+        return x
+
+    @staticmethod
+    def get_mask(adj):
+        # adj: [B,N,N]
+        adj_sum = adj.sum(-1)
+        mask = torch.where(adj_sum>0, torch.tensor(1).to(adj_sum.device), torch.tensor(0).to(adj_sum.device))
+        num_atoms = mask.sum(-1).unsqueeze(-1)    # num_atoms: [B,1]
+        mask = mask/num_atoms
+        return mask.unsqueeze(-1)   # retval: [B,N,1]
+    
     @staticmethod
     def mol_to_graph_feature(mol):
         if mol:
@@ -149,11 +169,9 @@ class DFRscore(nn.Module):
           N_atoms: list
         """
 
-        print('Mol To Graph Feature')
         since = time.time()
         with mp.Pool(processes=self.num_cores) as p:
             result = p.map(self.mol_to_graph_feature, mol_list)
-        print(f'Fin {time.time()-since}')
 
         node_feats , adjs, N_atoms = [], [], []
         for node_feature, adj, num_atoms in result:
@@ -278,3 +296,28 @@ class DFRscore(nn.Module):
                 f'  device: {self.device}\n' + \
                 ')'
 
+if __name__ == '__main__':
+    from rdkit.Chem import MolFromSmiles as Mol
+    from rdkit.Chem.rdmolops import GetAdjacencyMatrix
+
+    smi1, smi2, smi3 = 'CCCO', 'C1CCCCC1', 'CCCCCOCC'
+    print(smi1, smi2, smi3)
+    mol1, mol2, mol3 = Mol(smi1), Mol(smi2), Mol(smi3)
+
+    x = torch.zeros(3,8,10)
+    x[0, :4] = torch.arange(10).repeat(4,1)
+    x[1, :6] = torch.arange(10).repeat(6,1)
+    x[2, :8] = torch.arange(10).repeat(8,1)
+    print(x)
+
+    adjs = torch.zeros((3,8,8))
+    adjs[0, :4, :4] = torch.from_numpy(GetAdjacencyMatrix(mol1) + np.eye(mol1.GetNumAtoms()))
+    adjs[1, :6, :6] = torch.from_numpy(GetAdjacencyMatrix(mol2) + np.eye(mol2.GetNumAtoms()))
+    adjs[2, :8, :8] = torch.from_numpy(GetAdjacencyMatrix(mol3) + np.eye(mol3.GetNumAtoms()))
+    weighted_mask = DFRscore.get_mask(adjs)
+    print(weighted_mask)
+
+    x = torch.mul(x,weighted_mask)
+    print(x)
+    x = x.sum(1)
+    print(x)

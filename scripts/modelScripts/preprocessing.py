@@ -147,6 +147,11 @@ def do_get_graph_feature(tasks,save_dir, batch_size):
                     batch_size,
                     task_idx 
                     )
+            #get_graph_feature_udg(data_list,
+            #        save_dir,
+            #        batch_size,
+            #        task_idx 
+            #        )
     return
 
 def get_graph_feature(data_list,
@@ -195,6 +200,55 @@ def get_graph_feature(data_list,
                         fw)
     return True
 
+def get_graph_feature_udg(data_list,
+                save_dir,
+                batch_size,
+                task_idx,
+                for_inference=False
+                ):
+    max_num_atoms=64
+    len_features=36
+    for idx, line in enumerate(data_list):
+        idx += batch_size*task_idx
+        line = line.rstrip()
+        if for_inference:
+            smi = line
+        else:
+            smi, label = line.split('\t')
+            label = int(float(label))
+        mol = Mol(smi)
+        sssr = Chem.GetSymmSSSR(mol)
+        num_atoms = mol.GetNumAtoms()
+        adj = GetAdjacencyMatrix(mol) + np.eye(num_atoms)
+        padded_adj = np.zeros((max_num_atoms,max_num_atoms))
+        padded_adj[:num_atoms,:num_atoms] = adj
+        feature = []
+        atoms = mol.GetAtoms()
+        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
+        for atom in atoms:
+            feature.append(get_node_feature(atom))
+        #feature = np.array(feature)
+        feature = np.concatenate([np.array(feature), ring_feature],axis=1)
+
+        padded_feature = np.zeros((max_num_atoms, len_features))
+        padded_feature[:num_atoms,:len_features] = feature
+        padded_feature = torch.from_numpy(padded_feature)
+        padded_adj = torch.from_numpy(padded_adj)
+        if for_inference:
+            with open(f'{save_dir}/{idx}.pkl','wb') as fw:
+                pickle.dump({'smi':smi,
+                        'feature':padded_feature,
+                        'adj':padded_adj},
+                        fw)
+        else:
+            with open(f'{save_dir}/{label}_{idx}.pkl','wb') as fw:
+                pickle.dump({'smi':smi,
+                        'feature':padded_feature,
+                        'adj':padded_adj,
+                        'label':label},
+                        fw)
+    return True
+
 
 def one_of_k_encoding(x,allowable_set):
     if x not in allowable_set:
@@ -214,11 +268,8 @@ def get_node_feature(atom):
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    #one_of_k_encoding(atom.GetChiralTag(),[ChiralType.CHI_UNSPECIFIED, ChiralType.CHI_TETRAHEDRAL_CCW, ChiralType.CHI_TETRAHEDRAL_CW, 'ELSE'])+
                     [atom.GetIsAromatic()])
                     # 11+6+6+6+1 = 30
-                    # 11+6+6+4+1 = 28
-                    # 11+6+6+1 = 24
 
 # 3. Main functions
 def train_data_preprocess(args):

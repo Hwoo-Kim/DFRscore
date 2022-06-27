@@ -87,3 +87,23 @@ def infer_collate_fn(batch):
     sample['adj']=torch.stack(adj_batch,0)
     sample['feature']=pad(node_batch,batch_first=True,padding_value=0.0)
     return sample        
+
+#if __name__=='__main__':
+#    from rdkit.Chem import MolFromSmiles as Mol
+#    from rdkit.Chem.rdmolops import GetAdjacencyMatrix
+#
+#    def get_node_feature(mol):
+#        num_atoms = mol.GetNumAtoms()
+#        adj = GetAdjacencyMatrix(mol) + np.eye(num_atoms)
+#        adj = torch.from_numpy(adj).bool()
+#        feature = torch.from_numpy(np.array([np.ones(36) for atom in mol.GetAtoms()])).bool()
+#
+#        return {'feature':feature, 'adj':adj, 'N_atom': num_atoms, 'label':1}
+#
+#    smi1, smi2, smi3 = 'CCCO', 'C1CCCCC1', 'CCCCCOCC'
+#    print(smi1, smi2, smi3)
+#    mol1, mol2, mol3 = Mol(smi1), Mol(smi2), Mol(smi3)
+#    batch = [get_node_feature(mol1), get_node_feature(mol2), get_node_feature(mol3)]
+#    new_batch = gat_collate_fn(batch)
+#    print(new_batch['adj'])
+#    #print(new_batch['feature'])

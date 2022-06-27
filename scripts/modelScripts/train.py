@@ -123,7 +123,7 @@ def train_DFRscore(args):
                     batch_size=args.batch_size,
                     shuffle = False,
                     collate_fn=gat_collate_fn,
-                    num_workers=int(args.num_threads)
+                    num_workers=int(args.num_threads//2)
                     )
     #test_data_loader = DataLoader(
     #                TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),
@@ -190,16 +190,3 @@ def train_DFRscore(args):
     #log()
     #log(f'  ----- Test result -----',f'  test loss: {test_loss}')
 
-if __name__=='__main__':
-    ZERO = torch.tensor(0).float()
-    NEG_MIN = torch.tensor(5)
-    y_true= torch.cat([torch.ones(5),torch.ones(5)*2,torch.ones(5)*3,torch.ones(5)*4,torch.ones(5)*5])
-    y_pred= (torch.cat([torch.arange(5),torch.arange(5),torch.arange(5),torch.arange(5),torch.arange(5)])+1).float()
-    print('y_true:', y_true)
-    print('y_pred:', y_pred)
-    print(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
-    print(torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2)))
-    y_pred= (torch.ones(25)*6).float()
-    print('y_pred:', y_pred)
-    print(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2))
-    print(torch.mean(torch.where(y_true==NEG_MIN, (torch.where(y_pred>NEG_MIN, ZERO, y_pred-NEG_MIN))**2, (y_pred-y_true)**2)))

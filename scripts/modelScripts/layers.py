@@ -6,7 +6,7 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 
 class FeedForward(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden_dims,dropout):
+    def __init__(self, in_dim, out_dim, hidden_dims, dropout):
         super().__init__()
         self.num_hidden = len(hidden_dims)
         self.fcs = nn.ModuleList()
@@ -14,20 +14,18 @@ class FeedForward(nn.Module):
             if i ==0: self.fcs.append(nn.Linear(in_dim,hidden_dims[i]))
             elif i==self.num_hidden: self.fcs.append(nn.Linear(hidden_dims[-1],out_dim))
             else: self.fcs.append(nn.Linear(hidden_dims[i-1],hidden_dims[i]))
-        #self.act = nn.ReLU()
-        #self.act = nn.ELU()
-        self.act = nn.SiLU()
-        self.dropout = dropout
+        self.act = nn.ReLU()
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):
         for layer in self.fcs[:-1]:
             x = self.act(layer(x))
-            if self.dropout: x = self.dropout(x)
+            x = self.dropout(x)
         x = self.fcs[-1](x) # prediction layer
         return x
 
 class GraphAttentionLayer(nn.Module):
-    def __init__(self, emb_dim, num_heads, alpha=0.2,bias=True, dropout=nn.Dropout(p=0.2)):
+    def __init__(self, emb_dim, num_heads, alpha=0.2,bias=True):
         super().__init__()
 
         assert emb_dim % num_heads == 0, "For GAT layer, emb_dim must be dividable by num_heads."
@@ -36,12 +34,9 @@ class GraphAttentionLayer(nn.Module):
         self.alpha = alpha
         self.bias = bias
         self.leakyrelu=nn.LeakyReLU(negative_slope=alpha)
-        #self.act = nn.ReLU()
-        #self.act = nn.ELU()
-        self.act = nn.SiLU()
+        self.act = nn.ReLU()
         self.W = nn.Linear(emb_dim, emb_dim, bias=self.bias)     # each W_k = [emb_dim, emb_dim/num_heads]
         self.a= nn.Linear(emb_dim, 2*num_heads, bias=self.bias)
-        self.dropout = dropout
 
     def forward(self, x, A):
         Wh = self.W(x)                      # [B,N,F]
@@ -55,7 +50,6 @@ class GraphAttentionLayer(nn.Module):
         attention = self.nan_to_num(attention)
         retval = torch.matmul(attention,Wh)                         # [B,H,N,F/H]
         retval = self.act(self.restore(retval))
-        if self.dropout: retval = self.dropout(retval)
         return retval
 
     def transform(self, tensor):
@@ -87,11 +81,25 @@ class GraphAttentionLayer(nn.Module):
                 f'  W: Linear({self.emb_dim} -> {self.emb_dim}, bias={self.bias})\n' + \
                 f'  a: Linear({self.emb_dim} -> {2*self.num_heads}, bias={self.bias})\n)'
 
-if __name__=='__main__':
-    att = GraphAttentionLayer(
-            emb_dim=128,
-            num_heads=8,
-            dropout=0.2,
-            alpha=0.2
-            )
-    print(att)
+#if __name__=='__main__':
+#    class Test(nn.Module):
+#        def __init__(self):
+#            super().__init__()
+#            self.A = FeedForward(5, 1, [12,12], 0.2)
+#
+#        def forward(self, x):
+#            return self.A(x)
+#
+#    x = torch.ones((2,5))
+#    model = Test()
+#    model.train()
+#    print(model(x))
+#
+#    model.eval()
+#    print(model(x))
+#
+#    model.train()
+#    print(model(x))
+#
+#    model.eval()
+#    print(model(x))

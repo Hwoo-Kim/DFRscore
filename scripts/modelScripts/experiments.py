@@ -76,19 +76,19 @@ def runExp01(predictor,
 
     # 2-1. get scores SA score, SC score, and DFRscore
     # SA score and SC score were already rescaled into [0, 1].
-    logger('\n  Calculating scores...')
-    logger('  calculating SA score... (not rescaled!)', end='\t')
-    p = Pool(num_cores)
-    SAScores = p.map_async(getSAScore, test_smi_list)
-    SAScores.wait()
-    p.close()
-    p.join()
-    SAScores=SAScores.get()
-    #SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
-    logger('  Done.')
-    logger('  calculating SC score... (not rescaled!)', end='\t')
-    SCScores = getSCScore(test_smi_list)
-    logger('  Done.')
+    #logger('\n  Calculating scores...')
+    #logger('  calculating SA score... (not rescaled!)', end='\t')
+    #p = Pool(num_cores)
+    #SAScores = p.map_async(getSAScore, test_smi_list)
+    #SAScores.wait()
+    #p.close()
+    #p.join()
+    #SAScores=SAScores.get()
+    ##SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
+    #logger('  Done.')
+    #logger('  calculating SC score... (not rescaled!)', end='\t')
+    #SCScores = getSCScore(test_smi_list)
+    #logger('  Done.')
     logger('  calculating DFRscore...', end='\t')
     DFRs = predictor.smiListToScores(test_smi_list)
     logger('  Done.')
@@ -119,13 +119,13 @@ def runExp01(predictor,
     logger('    auroc was calculated by reversed score.')
 
     # 2-4. SA score and SC score
-    logger('  2. SA score')
-    sas_auroc = get_AUROC(true_label_list, -1*np.array(SAScores))
-    logger(f'   auroc = {sas_auroc}, auroc was calculated by reversed score.')
+    #logger('  2. SA score')
+    #sas_auroc = get_AUROC(true_label_list, -1*np.array(SAScores))
+    #logger(f'   auroc = {sas_auroc}, auroc was calculated by reversed score.')
 
-    logger('  3. SC score')
-    scs_auroc = get_AUROC(true_label_list, -1*np.array(SCScores))
-    logger(f'   auroc = {scs_auroc}, auroc was calculated by reversed score.')
+    #logger('  3. SC score')
+    #scs_auroc = get_AUROC(true_label_list, -1*np.array(SCScores))
+    #logger(f'   auroc = {scs_auroc}, auroc was calculated by reversed score.')
 
     # 3. Setting for MCC test.
     true_label_list = []
@@ -141,12 +141,12 @@ def runExp01(predictor,
         n = each_class_sizes[i]
         key = str(i)
         DFRs_for_each_class[key] = DFRs[index:index + n]
-        SAScores_for_each_class[key] = SAScores[index:index + n]
-        SCScores_for_each_class[key] = SCScores[index:index + n]
+    #    SAScores_for_each_class[key] = SAScores[index:index + n]
+    #    SCScores_for_each_class[key] = SCScores[index:index + n]
         index += n
     datas = dict()
-    datas['sa'] = SAScores_for_each_class
-    datas['sc'] = SCScores_for_each_class
+    #datas['sa'] = SAScores_for_each_class
+    #datas['sc'] = SCScores_for_each_class
     datas['dfr'] = DFRs_for_each_class
 
     # Save pickle files

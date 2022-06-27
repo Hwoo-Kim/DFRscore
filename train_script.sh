@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N DFR_SiLU_SiLU
-#PBS -l nodes=gnode3:ppn=4:gpus=1:gpu1
+#PBS -N DFR_train
+#PBS -l nodes=gnode6:ppn=4:gpus=1:gpu1
 #PBS -l walltime=7:00:00:00 
 #PBS -o out.txt
 
@@ -14,8 +14,7 @@ source activate DFRscore
 cd ~/DFRscore
 
 data_dir=save/PubChem/retro_result/
-model_save_name=SiLU_SiLU
-#data_preprocessing=no_additional_seed1024
+model_save_name=DFRscore
 data_preprocessing=basic_process
 
 # Training parameters
@@ -28,7 +27,6 @@ n_conv_layer=5
 n_fc_layer=4
 conv_dim=256
 fc_dim=128
-len_features=36
 
 python train_model.py --data_dir $data_dir \
     --save_name $model_save_name \
@@ -41,6 +39,5 @@ python train_model.py --data_dir $data_dir \
     --n_fc_layer $n_fc_layer \
     --conv_dim $conv_dim \
     --fc_dim $fc_dim  \
-    --len_features $len_features \
-    
+
 date

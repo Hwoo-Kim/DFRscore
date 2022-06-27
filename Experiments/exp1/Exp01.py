@@ -12,8 +12,13 @@ import sys
 
 # 1. Experiments setting
 save_dir = str(sys.argv[1])       # DONOT USE '/' in front and back!
-model_path = '/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_94.pt'
-test_file_path = f'/home/hwkim/DFRscore/save/{save_dir}/pubchem_removed'
+#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_new_pre_proc_masked_mean/DFR_model_100.pt'
+#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_prev_processing_code_new_model/Best_model_147.pt'
+#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_masked_mean_lr0002/Best_model_134.pt'
+#model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv6_dimFC128_dimConv256/Best_model_148.pt'
+model_path = '/home/hwkim/DFRscore/save/PubChem/NEW_ReLU_ReLU_lr0004/Best_model_141.pt'
+#test_file_path = f'/home/hwkim/DFRscore/save/{save_dir}/pubchem_removed'
+test_file_path = f'/home/hwkim/DFRscore/save/{save_dir}/retro_result'
 
 num_cores = int(sys.argv[2])
 each_class_sizes = [int(sys.argv[3])] * 5
@@ -26,8 +31,8 @@ log = logger(result_log_path)
 log('----- Input Config Information -----')
 log(f'  save_dir: {save_dir}')
 log(f'  test_file_path: {test_file_path}')
-predictor = DFRscore.from_trained_model(model_path, num_cores=num_cores)
-predictor = predictor.cuda()
+predictor = DFRscore.from_trained_model(model_path)
+#predictor = predictor.cuda()
 log(predictor)
 
 # 2. Get Evaluation Metrics

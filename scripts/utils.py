@@ -42,7 +42,15 @@ class logger():
 
     @classmethod
     def get_skip_args(cls):
-        return ['logger', 'root', 'save_name', 'preprocess_dir', 'preprocess_logger', 'data_dir', 'save_dir']
+        return ['logger',
+                'root',
+                'save_name',
+                'preprocess_dir',
+                'preprocess_logger',
+                'data_preprocessing',
+                'data_dir',
+                'save_dir'
+                ]
 
     def save(self, log, end):
         with open(self.log_file, 'a') as w :
