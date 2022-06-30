@@ -32,8 +32,8 @@ class DFRscore(nn.Module):
     """
     _CONV_DIM = 256
     _FC_DIM = 128
-    _NUM_GAT_LAYER = 5
-    _NUM_FC_LAYER = 4
+    _NUM_GAT_LAYER = 6
+    _NUM_FC_LAYER = 2
     _NUM_HEADS = 8
     _LEN_FEATURES = 36
     _MAX_STEP = 4
@@ -65,7 +65,7 @@ class DFRscore(nn.Module):
         self.dense = FeedForward(
                 in_dim=self.conv_dim,
                 out_dim=self.out_dim,
-                hidden_dims=[self.fc_dim]*(self.n_fc_layer-1),
+                hidden_dims=[self.fc_dim]*(self.n_fc_layer),
                 dropout=self.dropout
                 )
         self.relu = nn.ReLU()
@@ -75,6 +75,16 @@ class DFRscore(nn.Module):
         # zero vectors
         self._zero_node_feature = torch.zeros((1,self.len_features))*torch.tensor(float('nan'))
         self._zero_adj = torch.zeros((1,1))
+
+        # parameter initialize
+        self._init_params()
+
+    def _init_params(self):
+        for param in self.parameters():
+            if param.dim() == 1:
+                continue
+            else:
+                nn.init.xavier_normal_(param)
 
     def _init_default_setting(self):
         args = {'conv_dim': self._CONV_DIM,

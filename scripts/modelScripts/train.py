@@ -70,7 +70,11 @@ def train_DFRscore(args):
     save_dir = args.save_dir
     log = args.logger
     log('\n2. Model Training Phase')
-    new_data_dir=data_dir
+    if args.use_scratch:
+        new_data_dir = f'/scratch/hwkim/{args.data_preprocessing}'
+        log(f'scratch data is used: {new_data_dir}')
+    else:
+        new_data_dir = data_dir
     now = datetime.now()
     since_from = now.strftime('%Y. %m. %d (%a) %H:%M:%S')
     since = time.time()
@@ -123,7 +127,7 @@ def train_DFRscore(args):
                     batch_size=args.batch_size,
                     shuffle = False,
                     collate_fn=gat_collate_fn,
-                    num_workers=int(args.num_threads//2)
+                    num_workers=int(args.num_threads)
                     )
     #test_data_loader = DataLoader(
     #                TrainDataset(data_dir=f'{new_data_dir}/generated_data', key_dir=f'{new_data_dir}/data_keys',mode='test'),

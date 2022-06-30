@@ -49,7 +49,8 @@ def gat_collate_fn(batch):
     node_batch=[]
     label_batch=[]
 
-    max_num_atom = np.max(np.array([b['N_atom'] for b in batch]))
+    #max_num_atom = np.max(np.array([b['N_atom'] for b in batch]))
+    max_num_atom = np.max(np.array([b['feature'].size(0) for b in batch]))
     node_dim = batch[0]['feature'].size(-1)
     for b in batch:
         num_atoms = b['feature'].size(0)
