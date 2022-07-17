@@ -1,1 +1,1 @@
-from . import layers, preprocessing, data, model, metrics
+from . import data, layers, metrics, model, preprocessing

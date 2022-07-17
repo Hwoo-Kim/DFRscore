@@ -1,29 +1,31 @@
-from rdkit import Chem
+import errno
+import os
+import pickle
+import queue
+import random
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from functools import wraps
+
+from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
 from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem.FragmentMatcher import FragmentMatcher
-import queue
-import pickle
-import sys, time, shutil
-import subprocess
-import random
-import os
-from functools import wraps
-import errno
-import signal
-from rdkit import RDLogger
-RDLogger.DisableLog('rdApp.*')
+
+RDLogger.DisableLog("rdApp.*")
 
 
-class logger():
-
+class logger:
     def __init__(self, log_file_path):
         self.log_file = log_file_path
         try:
-            with open(self.log_file, 'a') as w:
+            with open(self.log_file, "a") as w:
                 pass
         except:
             print(f"Invalid log path {log_file_path}")
@@ -31,70 +33,74 @@ class logger():
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
-    def __call__(self, *log, save_log = True, end='\n'):
-        if len(log)==0:
-            log = ('',)
+    def __call__(self, *log, save_log=True, end="\n"):
+        if len(log) == 0:
+            log = ("",)
         log = [str(i) for i in log]
-        log = '\n'.join(log)
+        log = "\n".join(log)
         print(log, end=end)
         if save_log:
             self.save(log, end=end)
 
     @classmethod
     def get_skip_args(cls):
-        return ['logger',
-                'root',
-                'save_name',
-                'preprocess_dir',
-                'preprocess_logger',
-                'data_preprocessing',
-                'data_dir',
-                'save_dir'
-                ]
+        return [
+            "logger",
+            "root",
+            "save_name",
+            "preprocess_dir",
+            "preprocess_logger",
+            "data_preprocessing",
+            "data_dir",
+            "save_dir",
+        ]
 
     def save(self, log, end):
-        with open(self.log_file, 'a') as w :
-            w.write(log+end)
+        with open(self.log_file, "a") as w:
+            w.write(log + end)
 
     def log_arguments(self, args):
         d = vars(args)
         _skip_args = self.get_skip_args()
         for v in d:
-            if not v in _skip_args: 
-                self(f'  {v}: {d[v]}')
+            if not v in _skip_args:
+                self(f"  {v}: {d[v]}")
+
 
 def retro_save_dir_setting(root, args):
-    target_data_name = args.retro_target.split('/')[-1].split('.smi')[0]
-    if not os.path.exists(os.path.join(root,args.save_name,target_data_name)):
-        os.mkdir(os.path.join(root,args.save_name,target_data_name))
+    target_data_name = args.retro_target.split("/")[-1].split(".smi")[0]
+    if not os.path.exists(os.path.join(root, args.save_name, target_data_name)):
+        os.mkdir(os.path.join(root, args.save_name, target_data_name))
 
-    save_dir = os.path.join(root,args.save_name,target_data_name,'retro_result')
+    save_dir = os.path.join(root, args.save_name, target_data_name, "retro_result")
     if os.path.exists(save_dir):
         i = 2
-        while os.path.exists(save_dir+str(i)):
+        while os.path.exists(save_dir + str(i)):
             i += 1
-        save_dir = save_dir+str(i)
+        save_dir = save_dir + str(i)
     os.mkdir(save_dir)
     return save_dir
 
+
 def train_save_dir_setting(args):
     data_dir = os.path.normpath(args.data_dir)
-    retro_data_dir = '/'.join(data_dir.split('/')[:-1])
-    save_dir = os.path.normpath(os.path.join(retro_data_dir,args.save_name))
+    retro_data_dir = "/".join(data_dir.split("/")[:-1])
+    save_dir = os.path.normpath(os.path.join(retro_data_dir, args.save_name))
 
-    if '/' in args.save_name:
-        out_dir, inner_dir = args.save_name.split('/')
+    if "/" in args.save_name:
+        out_dir, inner_dir = args.save_name.split("/")
         out_dir = os.path.join(retro_data_dir, out_dir)
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
-    
+
     if os.path.exists(save_dir):
         i = 2
-        while os.path.exists(f'{save_dir}{i}'):
-            i+=1
-        save_dir = f'{save_dir}{i}'
+        while os.path.exists(f"{save_dir}{i}"):
+            i += 1
+        save_dir = f"{save_dir}{i}"
     os.mkdir(save_dir)
     return data_dir, save_dir
+
 
 def get_cuda_visible_devices(num_gpus: int) -> str:
     """Get available GPU IDs as a str (e.g., '0,1,2')"""
@@ -106,11 +112,16 @@ def get_cuda_visible_devices(num_gpus: int) -> str:
             cmd = ["nvidia-smi", "-i", str(i)]
 
             import sys
+
             major, minor = sys.version_info[0], sys.version_info[1]
             if major == 3 and minor > 6:
-                proc = subprocess.run(cmd, capture_output=True, text=True)  # after python 3.7
+                proc = subprocess.run(
+                    cmd, capture_output=True, text=True
+                )  # after python 3.7
             if major == 3 and minor <= 6:
-                proc = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)  # for python 3.6
+                proc = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, universal_newlines=True
+                )  # for python 3.6
 
             if "No devices were found" in proc.stdout:
                 break
@@ -134,5 +145,6 @@ def get_cuda_visible_devices(num_gpus: int) -> str:
 
     return idle_gpus
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     pass
