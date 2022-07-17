@@ -49,6 +49,7 @@ class DFRscore(nn.Module):
             if not key in self.__dict__:
                 raise KeyError(f'{key} is an unknown key.')
         self.__dict__.update(kwargs)
+        torch.set_num_threads(int(self.num_cores))
 
         self.dropout_layer = nn.Dropout(self.dropout)
         self.embedding = nn.Linear(self.len_features, self.conv_dim, bias=False)
@@ -155,7 +156,7 @@ class DFRscore(nn.Module):
             num_atoms = mol.GetNumAtoms()
 
             # 1. Adjacency
-            adj = torch.from_numpy(GetAdjacencyMatrix(mol) + np.eye(num_atoms))
+            adj = torch.from_numpy(np.asarray(GetAdjacencyMatrix(mol),dtype=bool) + np.eye(num_atoms,dtype=bool))
 
             # 2. Node Feature
             sssr = Chem.GetSymmSSSR(mol)
@@ -163,8 +164,8 @@ class DFRscore(nn.Module):
             for atom in mol.GetAtoms():
                 node_feature.append(get_node_feature(atom))
             ring_feature = sssr_to_ring_feature(sssr, num_atoms)
-            node_feature = np.concatenate([np.array(node_feature), ring_feature],axis=1)
-            node_feature = torch.from_numpy(node_feature).bool()
+            node_feature = np.concatenate([np.stack(node_feature,axis=0), ring_feature],axis=1)
+            node_feature = torch.from_numpy(node_feature)
             return node_feature, adj, num_atoms
         else:
             return None, None, None
@@ -211,17 +212,19 @@ class DFRscore(nn.Module):
             'input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol.'
         feature, adj = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
-        adji = adj.float().unsqueeze(0).to(self.device)
+        adj = adj.float().unsqueeze(0).to(self.device)
         score = self.forward(feature, adj).to('cpu').detach().numpy()
         return torch.where(score.isnan(), torch.tensor(float(self.max_stpe+1)), score)
 
-    def smiListToScores(self, smi_list, batch_size=256):
+    def smiListToScores(self, smi_list: list, batch_size=256) -> np.array:
         with mp.Pool(self.num_cores) as p:
             mol_list = p.map(self._mol_from_smiles, smi_list)
         return self.molListToScores(mol_list, batch_size)
 
-    def molListToScores(self, mol_list, batch_size=256):
+    def molListToScores(self, mol_list: list, batch_size=256) -> np.array:
+        t1 = time.time()
         node_feats, adjs, N_atoms = self.mols_to_graph_feature(mol_list)
+        t2 = time.time()
 
         data_set = InferenceDataset(node_feats, adjs, N_atoms)
         data_loader = DataLoader(data_set,
@@ -266,14 +269,14 @@ class DFRscore(nn.Module):
         return passed_data, passed_idx
 
     def cuda(self):
-        _DFR = super().cuda()
-        self.device = _DFR.embedding.weight.device
-        return _DFR
+        super().cuda()
+        self.device = self.embedding.weight.device
+        return self
 
     def to(self, torch_device):
-        _DFR = super().to(torch_device)
-        self.device = _DFR.embedding.weight.device
-        return _DFR
+        super().to(torch_device)
+        self.device = self.embedding.weight.device
+        return self
     
     @staticmethod
     def _mol_from_smiles(smi):
@@ -293,17 +296,17 @@ class DFRscore(nn.Module):
 
     def __repr__(self):
         return f'{self.__class__.__name__}(\n' + \
-                f'  loaded_model: {self.path_to_model}\n'+ \
-                f'  conv_dim: {self.conv_dim}\n'+ \
-                f'  fc_dim: {self.fc_dim}\n'+ \
-                f'  n_GAT_layer: {self.n_GAT_layer}\n'+ \
-                f'  n_fc_layer: {self.n_fc_layer}\n'+ \
-                f'  num_heads: {self.num_heads}\n'+ \
-                f'  len_features: {self.len_features}\n' + \
-                f'  max_step: {self.max_step}\n' + \
-                f'  num_cores: {self.num_cores}\n' + \
-                f'  dropout: {self.dropout}\n' + \
-                f'  device: {self.device}\n' + \
+                f'loaded_model: {self.path_to_model}\n'+ \
+                f'conv_dim: {self.conv_dim}\n'+ \
+                f'fc_dim: {self.fc_dim}\n'+ \
+                f'num_GAT_layer: {self.n_GAT_layer}\n'+ \
+                f'num_FC_layer: {self.n_fc_layer}\n'+ \
+                f'num_heads: {self.num_heads}\n'+ \
+                f'len_features: {self.len_features}\n' + \
+                f'max_step: {self.max_step}\n' + \
+                f'num_cores: {self.num_cores}\n' + \
+                f'dropout: {self.dropout}\n' + \
+                f'device: {self.device}\n' + \
                 ')'
 
 if __name__ == '__main__':

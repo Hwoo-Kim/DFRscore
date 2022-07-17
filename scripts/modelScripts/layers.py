@@ -8,13 +8,16 @@ from rdkit.Chem import rdmolops
 class FeedForward(nn.Module):
     def __init__(self, in_dim, out_dim, hidden_dims, dropout):
         super().__init__()
-        self.num_hidden = len(hidden_dims)
-        self.fcs = nn.ModuleList()
-        for i in range(self.num_hidden+1):
-            if i ==0: self.fcs.append(nn.Linear(in_dim,hidden_dims[i]))
-            elif i==self.num_hidden: self.fcs.append(nn.Linear(hidden_dims[-1],out_dim))
-            else: self.fcs.append(nn.Linear(hidden_dims[i-1],hidden_dims[i]))
-        self.act = nn.ReLU()
+        assert isinstance(hidden_dims, list)
+        if len(hidden_dims) == 0:
+            self.fcs = nn.ModuleList([nn.Linear(in_dim, out_dim)])
+        else:
+            self.num_hidden_layers = len(hidden_dims)-1
+            self.fcs = nn.ModuleList([nn.Linear(in_dim, hidden_dims[0])])
+            for i in range(self.num_hidden_layers):
+                self.fcs.append(nn.Linear(hidden_dims[i],hidden_dims[i+1]))
+            self.fcs.append(nn.Linear(hidden_dims[-1],out_dim))
+        self.act = nn.ELU()
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):
@@ -35,6 +38,7 @@ class GraphAttentionLayer(nn.Module):
         self.bias = bias
         self.leakyrelu=nn.LeakyReLU(negative_slope=alpha)
         self.act = nn.ReLU()
+        #self.act = nn.ELU()
         self.W = nn.Linear(emb_dim, emb_dim, bias=self.bias)     # each W_k = [emb_dim, emb_dim/num_heads]
         self.a= nn.Linear(emb_dim, 2*num_heads, bias=self.bias)
 
@@ -77,7 +81,7 @@ class GraphAttentionLayer(nn.Module):
 
     def __repr__(self):
         return f'{self.__class__.__name__}(\n' + \
-                f'  activation: {self.leakyrelu}\n' + \
+                f'  activation: {self.act}\n' + \
                 f'  W: Linear({self.emb_dim} -> {self.emb_dim}, bias={self.bias})\n' + \
                 f'  a: Linear({self.emb_dim} -> {2*self.num_heads}, bias={self.bias})\n)'
 

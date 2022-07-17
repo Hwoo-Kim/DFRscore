@@ -147,11 +147,6 @@ def do_get_graph_feature(tasks,save_dir, batch_size):
                     batch_size,
                     task_idx 
                     )
-            #get_graph_feature_udg(data_list,
-            #        save_dir,
-            #        batch_size,
-            #        task_idx 
-            #        )
     return
 
 def get_graph_feature(data_list,
@@ -172,7 +167,7 @@ def get_graph_feature(data_list,
         num_atoms = mol.GetNumAtoms()
 
         # 1. Adjacency
-        adj = torch.from_numpy(GetAdjacencyMatrix(mol) + np.eye(num_atoms)).bool()
+        adj = torch.from_numpy(np.asarray(GetAdjacencyMatrix(mol),dtype=bool) + np.eye(num_atoms,dtype=bool))
 
         # 2. Node Feature
         sssr = Chem.GetSymmSSSR(mol)
@@ -180,8 +175,8 @@ def get_graph_feature(data_list,
         for atom in mol.GetAtoms():
             node_feature.append(get_node_feature(atom))
         ring_feature = sssr_to_ring_feature(sssr, num_atoms)
-        node_feature = np.concatenate([np.array(node_feature), ring_feature],axis=1)
-        node_feature = torch.from_numpy(node_feature).bool()
+        node_feature = np.concatenate([np.stack(node_feature,axis=0), ring_feature],axis=1)
+        node_feature = torch.from_numpy(node_feature)
 
         if for_inference:
             with open(f'{save_dir}/{idx}.pkl','wb') as fw:
@@ -200,63 +195,13 @@ def get_graph_feature(data_list,
                         fw)
     return True
 
-def get_graph_feature_udg(data_list,
-                save_dir,
-                batch_size,
-                task_idx,
-                for_inference=False
-                ):
-    max_num_atoms=64
-    len_features=36
-    for idx, line in enumerate(data_list):
-        idx += batch_size*task_idx
-        line = line.rstrip()
-        if for_inference:
-            smi = line
-        else:
-            smi, label = line.split('\t')
-            label = int(float(label))
-        mol = Mol(smi)
-        sssr = Chem.GetSymmSSSR(mol)
-        num_atoms = mol.GetNumAtoms()
-        adj = GetAdjacencyMatrix(mol) + np.eye(num_atoms)
-        padded_adj = np.zeros((max_num_atoms,max_num_atoms))
-        padded_adj[:num_atoms,:num_atoms] = adj
-        feature = []
-        atoms = mol.GetAtoms()
-        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
-        for atom in atoms:
-            feature.append(get_node_feature(atom))
-        #feature = np.array(feature)
-        feature = np.concatenate([np.array(feature), ring_feature],axis=1)
-
-        padded_feature = np.zeros((max_num_atoms, len_features))
-        padded_feature[:num_atoms,:len_features] = feature
-        padded_feature = torch.from_numpy(padded_feature)
-        padded_adj = torch.from_numpy(padded_adj)
-        if for_inference:
-            with open(f'{save_dir}/{idx}.pkl','wb') as fw:
-                pickle.dump({'smi':smi,
-                        'feature':padded_feature,
-                        'adj':padded_adj},
-                        fw)
-        else:
-            with open(f'{save_dir}/{label}_{idx}.pkl','wb') as fw:
-                pickle.dump({'smi':smi,
-                        'feature':padded_feature,
-                        'adj':padded_adj,
-                        'label':label},
-                        fw)
-    return True
-
-
 def one_of_k_encoding(x,allowable_set):
     if x not in allowable_set:
         x = allowable_set[-1]
     return list(map(lambda s: x == s, allowable_set))
 
 def sssr_to_ring_feature(sssr, num_atoms):
-    ring_feature = np.zeros([num_atoms,6])
+    ring_feature = np.zeros([num_atoms,6], dtype=bool)
     for ring in sssr:
         r_size = min(len(ring)-3,5)
         for idx in list(ring):
@@ -268,7 +213,7 @@ def get_node_feature(atom):
                     one_of_k_encoding(int(atom.GetDegree()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetExplicitValence()),[0,1,2,3,4,'ELSE'])+
                     one_of_k_encoding(int(atom.GetTotalDegree()),[0,1,2,3,4,'ELSE'])+
-                    [atom.GetIsAromatic()])
+                    [atom.GetIsAromatic()], dtype=bool)
                     # 11+6+6+6+1 = 30
 
 # 3. Main functions
