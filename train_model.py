@@ -55,6 +55,7 @@ if __name__=='__main__':
     parser.add_argument('--dropout', type = float, default=0.2, help = 'dropout for edge drop and normal dropout')
     parser.add_argument('--num_epoch',type = int, default=200, help = 'number of epochs')
     parser.add_argument('--lr',type = float, default=4e-4, help = 'learning rate')
+    parser.add_argument('--use_scratch',action='store_true', help = 'use scratch data or not')
     # For ReduceLROnPlateau
     parser.add_argument('--factor',type = float, default=0.5, help = 'decreasing factor')
     parser.add_argument('--patience',type = int, default=10, help = 'number of epochs with no improvement after which learning rate will be reduced')

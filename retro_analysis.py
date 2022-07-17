@@ -39,13 +39,9 @@ if __name__=='__main__':
     parser.add_argument("--num_molecules", help='number of molecules to be analyzed', type=int)
     parser.add_argument("--num_cores", help='number of cores used for multiprocessing', type=int)
     parser.add_argument("--save_name", help='directory where all the retro results will be saved', default='save', type=str)
-    parser.add_argument("--path", help='whether restoring synthesis path or not. if Ture, more time required.', default='False', type=str)
-    parser.add_argument("--exclude_in_R_bag", help='whether excluding molecules in retro_target file included in R bag', default='True', type=str)
+    parser.add_argument("--path", help='whether restoring synthesis path or not. if Ture, more time required.', action='store_true')
+    parser.add_argument("--exclude_in_R_bag", help='whether excluding molecules in retro_target file included in R bag', action='store_true')
     parser.add_argument("--batch_size", help='batch size for retrosynthetic analysis', default=100, type=int)
     parser.add_argument("--max_time", help='timeout criteria for a single molecule retro_analysis', default=3600, type=int)
     args = parser.parse_args()
-    assert args.path == 'True' or args.path == 'False', "args.path must be one of 'True' and 'False'."
-    args.path = args.path == 'True'
-    assert args.exclude_in_R_bag == 'True' or args.exclude_in_R_bag == 'False', "args.exclude_in_R_bag must be one of 'True' and 'False'."
-    args.exclude_in_R_bag = args.exclude_in_R_bag == 'True'
     retrosynthetic_analysis(args)
