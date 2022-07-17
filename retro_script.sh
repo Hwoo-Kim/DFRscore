@@ -34,8 +34,10 @@ MAIN_CMD="python retro_analysis.py
 
 if $exclude_in_R_bag; then
     MAIN_CMD=$MAIN_CMD" --exclude_in_R_bag"
+fi
 if $path; then
     MAIN_CMD=$MAIN_CMD" --path"
+fi
 
 $MAIN_CMD
 
