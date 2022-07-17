@@ -118,7 +118,7 @@ def runExp01(
     return True
 
 
-def runExp03(predictor, save_dir, test_file_path, logger):
+def runExp03(predictor, test_file_path, logger):
     """
     Arguments:
       predictor: DFRscore object already restored by trained model.
@@ -145,10 +145,6 @@ def runExp03(predictor, save_dir, test_file_path, logger):
         data = test_data[i]
         each_class_sizes.append(len(data))
         test_smi_list += data
-
-    # 1. result save path setting.
-    mcc_array_file = os.path.join(save_dir, "mcc_confusion_matrix.txt")
-    bin_array_file = os.path.join(save_dir, "bin_confusion_matrix.txt")
 
     # 2. Evaluate the refining ability
     logger("Number of each data:")
@@ -178,7 +174,7 @@ def runExp03(predictor, save_dir, test_file_path, logger):
         threshold = max_step + 0.5
         pred_label_list = (DFRscores < threshold).astype(int)
 
-        # 2-3. Confusion matrix and evaluate metrics
+        # Confusion matrix and evaluate metrics
         conf_matrix = BinCM(
             true_list=true_label_list, pred_list=pred_label_list, neg_label=0
         )

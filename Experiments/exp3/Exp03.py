@@ -36,7 +36,7 @@ log(predictor)
 
 # 2. Get Evaluation Metrics
 result = runExp03(
-    predictor, save_dir=args.test_data, test_file_path=test_file_path, logger=log
+    predictor, test_file_path=test_file_path, logger=log
 )
 
 log("\n** Exp03 finished **")
