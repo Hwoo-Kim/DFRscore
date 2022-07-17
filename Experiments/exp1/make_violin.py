@@ -33,6 +33,8 @@ ax.tick_params(axis='x', labelsize=12)
 ax.tick_params(axis='y', labelsize=12)
 for label in plot_list:
     data_plot.append(data[label])
+    for d in data[label]:
+        if d<1: print(d)
 
 positions = list(range(1,len(plot_list)+1))
 figure_plot = plt.violinplot(data_plot,positions = positions,showextrema = True,points=50)
@@ -44,4 +46,4 @@ for idx in range(len(color_list)):
     bar = figure_plot['cbars']
     bar.set_color([0,0,0])
 
-plt.savefig(f'{target_data}.png', format='png')
+plt.savefig(f'{target_data}/{target_data}.png', format='png')

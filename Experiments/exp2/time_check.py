@@ -1,4 +1,8 @@
-import os,sys,pickle,time
+import argparse
+import os 
+import sys
+import pickle
+import time
 from rdkit.Chem import MolFromSmiles as Mol
 from os.path import dirname
 sys.path.append(f'{dirname(dirname(os.path.abspath(dirname(__file__))))}')
@@ -18,33 +22,35 @@ def time_check(model, file_path, num_to_test):
     return elapsed_time
 
 # 1. Experiments setting
-num_cores = int(sys.argv[1])
-assert sys.argv[2] in ['True', 'False'], 'Neither True nor False!'
-use_cuda = sys.argv[2] == 'True'
-model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv5_dimFC128_dimConv256/Best_model_159.pt'
-#model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv5_dimFC256_dimConv512/Best_model_118.pt'
-test_path = f'/home/hwkim/DFRscore/data/retro_target_data/'
+parser = argparse.ArgumentParser()
+parser.add_argument('--num_cores', type=int)
+parser.add_argument('--use_cuda', action='store_true')
+parser.add_argument('--model_path', type=str)
+parser.add_argument('--test_path', type=str)
+args=parser.parse_args()
 
 num_to_test = 10000
-max_step = 4
 
-result_log_path = 'result.log'
+result_log_path = f'CUDA_{args.use_cuda}.log'
 log = logger(result_log_path)
 
 # 2. Model load
-log('----- Input config information -----')
+log('===== Input Config Information ======')
+log(f'num_cores: {args.num_cores}')
+log(f'test path: {args.test_path}')
+log(f'model_path: {args.model_path}')
+log(f"use_cuda: {args.use_cuda}")
 log(f'num to test: {num_to_test}')
-predictor = DFRscore.from_trained_model(
-        num_cores=num_cores, path_to_model=model_path,
-        fc_dim=128, conv_dim=256)
-if use_cuda: predictor = predictor.cuda()
+predictor = DFRscore.from_trained_model(args.model_path, num_cores=args.num_cores)
+if args.use_cuda:
+    predictor = predictor.cuda()
 log(predictor)
 
 # 3. Get Evaluation Metrics
-log('----- Time check started -----')
+log('\n===== Time check started =====')
 for data_set in ['ZINC.smi', 'ChEMBL.smi', 'MOSES.smi']:
-    data_path = os.path.join(test_path, data_set)
-    elapsed_time = time_check(predictor, data_path, num_to_test)
+    data_path = os.path.join(args.test_path, data_set)
     log(data_path)
+    elapsed_time = time_check(predictor, data_path, num_to_test)
     log(f'elapsed_time: {round(elapsed_time, 3)}\n')
 
