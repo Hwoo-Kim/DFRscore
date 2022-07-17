@@ -35,8 +35,6 @@ predictor = predictor.cuda()
 log(predictor)
 
 # 2. Get Evaluation Metrics
-result = runExp03(
-    predictor, test_file_path=test_file_path, logger=log
-)
+result = runExp03(predictor, test_file_path=test_file_path, logger=log)
 
 log("\n** Exp03 finished **")

@@ -122,7 +122,6 @@ def runExp03(predictor, test_file_path, logger):
     """
     Arguments:
       predictor: DFRscore object already restored by trained model.
-      save_dir: The directory where Experiment result will be saved.
       test_file_path: Path to the exp01 test file.
       logger: utils.Logger obj.
     """
