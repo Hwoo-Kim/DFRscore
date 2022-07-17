@@ -1,3 +1,4 @@
+import argparse
 import os,sys,pickle
 from os.path import dirname
 sys.path.append(f'{dirname(dirname(os.path.abspath(dirname(__file__))))}')
@@ -7,41 +8,40 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 from scripts.modelScripts.model import DFRscore
 from scripts.modelScripts.experiments import runExp01
 from scripts.utils import logger
-import sys
 
 
 # 1. Experiments setting
-save_dir = str(sys.argv[1])       # DONOT USE '/' in front and back!
-#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_new_pre_proc_masked_mean/DFR_model_100.pt'
-#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_prev_processing_code_new_model/Best_model_147.pt'
-#model_path = '/home/hwkim/DFRscore/save/PubChem/new_retro_data_masked_mean_lr0002/Best_model_134.pt'
-#model_path = '/home/hwkim/DFRscore/save/PubChem/DFR_nConv6_dimFC128_dimConv256/Best_model_148.pt'
-model_path = '/home/hwkim/DFRscore/save/PubChem/NEW_ReLU_ReLU_lr0004/Best_model_141.pt'
-#test_file_path = f'/home/hwkim/DFRscore/save/{save_dir}/pubchem_removed'
-test_file_path = f'/home/hwkim/DFRscore/save/{save_dir}/retro_result'
+parser = argparse.ArgumentParser()
+parser.add_argument('--test_data', type=str)
+parser.add_argument('--num_cores', type=int)
+parser.add_argument('--class_size', type=int)
+parser.add_argument('--model_path', type=str)
+parser.add_argument('--only_DFR', action='store_true')
+args = parser.parse_args()
+test_file_path = f'/home/hwkim/DFRscore/save/{args.test_data}/pubchem_removed'
 
-num_cores = int(sys.argv[2])
-each_class_sizes = [int(sys.argv[3])] * 5
-
-if not os.path.exists(save_dir):
-    os.mkdir(save_dir)
-result_log_path= os.path.join(os.path.abspath(dirname(__file__)), os.path.join(save_dir, 'model_eval_result.log'))
+if not os.path.exists(args.test_data):
+    os.mkdir(args.test_data)
+result_log_path= os.path.join(os.path.abspath(dirname(__file__)), os.path.join(args.test_data, 'exp_result.log'))
 log = logger(result_log_path)
 
-log('----- Input Config Information -----')
-log(f'  save_dir: {save_dir}')
-log(f'  test_file_path: {test_file_path}')
-predictor = DFRscore.from_trained_model(model_path)
-#predictor = predictor.cuda()
+log('===== Input Config Information ======')
+log(f'num_cores: {args.num_cores}')
+log(f'save_dir: {args.test_data}')
+log(f'test file path: {test_file_path}')
+log(f'only DFR: {args.only_DFR}')
+predictor = DFRscore.from_trained_model(args.model_path, num_cores=args.num_cores)
+predictor = predictor.cuda()
 log(predictor)
 
 # 2. Get Evaluation Metrics
-log('----- Model evaluation started -----')
 result = runExp01(predictor, 
-            save_dir=save_dir,
-            test_file_path=os.path.normpath(test_file_path),
+            save_dir=args.test_data,
+            num_cores=args.num_cores,
+            test_file_path=test_file_path,
             logger=log,
-            each_class_sizes=each_class_sizes,
+            class_size=args.class_size,
+            only_DFR=args.only_DFR
             )
 
-log('\nExp01 finished.\n')
+log('\n** Exp01 finished **')
