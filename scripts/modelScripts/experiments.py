@@ -1,7 +1,7 @@
 import sys, os
 import pickle
-from multiprocessing import Pool
-from .metrics import BinaryConfusionMatrix, UnbalMultiConfusionMatrix, get_AUROC
+import multiprocessing as mp
+from .metrics import BinaryConfusionMatrix as BinCM
 sys.path.append(f'{os.path.dirname(os.path.abspath(os.path.dirname(__file__)))}')
 from getScores import getSCScore, getSAScore, rescale_score
 
@@ -11,175 +11,110 @@ import csv
 
 def runExp01(predictor,
         save_dir,
+        num_cores,
         test_file_path,
         logger,
-        each_class_sizes=None
+        class_size,
+        only_DFR: bool
         ):
     '''
     Arguments:
       predictor: DFRscore object already restored by trained model.
-      num_class: the number of classes. equals to max_step+1.
-      test_smi_list: list of list. [neg, pos1, pos2, ...]
-        length = num_class
-        Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
-      save_dir: the directory where evaluation result will be saved.
+      save_dir: The directory where Experiment result will be saved.
+      num_cores: The number of cpu cores to use for multiprocessing.
+      test_file_path: Path to the exp01 test file.
+      logger: utils.Logger obj.
+      class_size: The number of molecules for each class (pos1, pos2, ...).
+      only_DFR: (bool) Whether calculating SA and SC scores or not.
     '''
     max_step = predictor.max_step
-    num_cores = predictor.num_cores
-    # 0. reading test files
-    if each_class_sizes is None:
-        each_class_sizes = [None for i in range(max_step+1)]
-    test_smi_list, true_smis, false_smis = [], [], []
-    if test_file_path[-4:] == '.pkl':
-        with open(test_file_path, 'rb') as fr:
-            test_data=pickle.load(fr)['test']
-    else:
-        test_data = dict()
-        for i in range(max_step+1):
-            if i == 0:
-                with open(os.path.join(test_file_path, f'neg{max_step}.smi'), 'r') as fr:
-                    test_data[0] = fr.read().splitlines()
-            else:
-                with open(os.path.join(test_file_path, f'pos{i}.smi'), 'r') as fr:
-                    test_data[i] = fr.read().splitlines()
+    class_sizes = [class_size] * (max_step+1)
+
+    # 1. reading test files
+    test_smi_list = []
 
     for i in range(max_step+1):
-        if each_class_sizes[i]:
-            try:
-                data = test_data[i][:each_class_sizes[i]]
-                each_class_sizes[i] = len(data)
-            except:
-                data = test_data[max_step+1][:each_class_sizes[i]]
-                each_class_sizes[i] = len(data)
+        if i == 0:
+            with open(os.path.join(test_file_path, f'neg{max_step}.smi'), 'r') as fr:
+                data = fr.read().splitlines()[:class_sizes[i]]
         else:
-            try:
-                data = test_data[i][:each_class_sizes[i]]
-                each_class_sizes[i] = len(data)
-            except:
-                data = test_data[max_step+1][:each_class_sizes[i]]
-                each_class_sizes[i] = len(data)
+            with open(os.path.join(test_file_path, f'pos{i}.smi'), 'r') as fr:
+                data = fr.read().splitlines()[:class_sizes[i]]
         test_smi_list += data
 
-    # 1. result save path setting.
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    csv_file = os.path.join(save_dir, 'eval_metrics.csv')
-    mcc_array_file= os.path.join(save_dir, 'mcc_confusion_matrix.txt')
-    bin_array_file = os.path.join(save_dir, 'bin_confusion_matrix.txt')
-
-    # 2. BCC! - comparison with SA and SC
-    for step in range(max_step+1):
-        if step == 0:
-            logger(f'  Neg: {each_class_sizes[step]}')
-        else:
-            logger(f'  Pos{step}: {each_class_sizes[step]}')
-
-    # 2-1. get scores SA score, SC score, and DFRscore
-    # SA score and SC score were already rescaled into [0, 1].
-    #logger('\n  Calculating scores...')
-    #logger('  calculating SA score... (not rescaled!)', end='\t')
-    #p = Pool(num_cores)
-    #SAScores = p.map_async(getSAScore, test_smi_list)
-    #SAScores.wait()
-    #p.close()
-    #p.join()
-    #SAScores=SAScores.get()
-    ##SAScores = np.array([0 for i in range(len(test_smi_list))]).astype(float)
-    #logger('  Done.')
-    #logger('  calculating SC score... (not rescaled!)', end='\t')
-    #SCScores = getSCScore(test_smi_list)
-    #logger('  Done.')
-    logger('  calculating DFRscore...', end='\t')
-    DFRs = predictor.smiListToScores(test_smi_list)
-    logger('  Done.')
-
-    # 2-2. Setting for BCC test.
     true_label_list = []
-    for idx, l in enumerate(each_class_sizes):
+    for idx, l in enumerate(class_sizes):
         if idx ==0:
             true_label_list += [0 for i in range(l)]
         else:
             true_label_list += [1 for i in range(l)]
     true_label_list = np.array(true_label_list)
 
-    # 2-2. Use our model as as binary classification model.
-    # Threshold must be max_step+0.5
-    threshold = max_step+0.5
-    bin_label_list = (DFRs<threshold).astype(int)
+    # 2. AUROC - comparison with SA and SC
+    logger('Number of each data:')
+    for step in range(max_step+1):
+        if step == 0:
+            logger(f' Neg: {class_sizes[step]}')
+        else:
+            logger(f' Pos{step}: {class_sizes[step]}')
 
-    # 2-3. Confusion matrix and evaluate metrics
-    logger('\n  ----- BCC Evaluation -----')
-    bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
-    logger('  1. Our model(DFR)')
-    bin_acc, bin_prec, bin_recall, bin_critical_err = \
-            bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
-    logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
-    logger(f'    {bin_acc}, {bin_prec}, {bin_recall},{bin_critical_err}', end=', ')
-    logger(get_AUROC(true_label_list, -1*np.array(DFRs)))
-    logger('    auroc was calculated by reversed score.')
+    logger('\n===== Calculating Scores =====')
+    logger('Calculating DFRscore...', end='\t')
+    DFRscores = predictor.smiListToScores(test_smi_list)
+    logger('Done.')
 
-    # 2-4. SA score and SC score
-    #logger('  2. SA score')
-    #sas_auroc = get_AUROC(true_label_list, -1*np.array(SAScores))
-    #logger(f'   auroc = {sas_auroc}, auroc was calculated by reversed score.')
+    if not only_DFR:
+        logger('Calculating SA score...', end='\t')
+        with mp.Pool(num_cores) as p:
+            SAScores = p.map(getSAScore, test_smi_list)
+        SAScores = rescale_score(SAScores, 1, 10, reverse=True)
+        logger('Done.')
 
-    #logger('  3. SC score')
-    #scs_auroc = get_AUROC(true_label_list, -1*np.array(SCScores))
-    #logger(f'   auroc = {scs_auroc}, auroc was calculated by reversed score.')
+        logger('Calculating SC score...', end='\t')
+        SCScores = getSCScore(test_smi_list)
+        SAScores = rescale_score(SCScores, 1, 5, reverse=True)
+        logger('Done.')
+    else:
+        logger('Only_DFR opiont is True, so others are not calculated.')
 
-    # 3. Setting for MCC test.
-    true_label_list = []
-    for idx, l in enumerate(each_class_sizes):
-        true_label_list += [idx for i in range(l)]
-    true_label_list = np.array(true_label_list)
+    logger('\n===== Calculating AUROCs =====')
+    logger('1. DFRscore')
+    dfr_auroc = (get_AUROC(true_label_list, -1*np.array(DFRscores)))
+    logger(f'auroc = {dfr_auroc}, auroc was calculated by reversed score.')
 
-    DFRs_for_each_class = dict()
-    SAScores_for_each_class = dict()
-    SCScores_for_each_class = dict()
+    if not only_DFR:
+        logger('2. SA score')
+        sas_auroc = get_AUROC(true_label_list, np.array(SAScores))
+        logger(f'auroc = {sas_auroc}, auroc was calculated by reversed score.')
+
+        logger('3. SC score')
+        scs_auroc = get_AUROC(true_label_list, np.array(SCScores))
+        logger(f'auroc = {scs_auroc}, auroc was calculated by reversed score.')
+
+    # 3. Save the calculated scores
+    logger('\n===== Saving the Calculated Scores =====')
+    DFRs_dict = dict()
+    SAScores_dict = dict()
+    SCScores_dict = dict()
     index = 0
-    for i in range(len(each_class_sizes)):
-        n = each_class_sizes[i]
+    for i in range(len(class_sizes)):
+        n = class_sizes[i]
         key = str(i)
-        DFRs_for_each_class[key] = DFRs[index:index + n]
-    #    SAScores_for_each_class[key] = SAScores[index:index + n]
-    #    SCScores_for_each_class[key] = SCScores[index:index + n]
+        DFRs_dict[key] = DFRscores[index:index + n]
+        if not only_DFR:
+            SAScores_dict[key] = SAScores[index:index + n]
+            SCScores_dict[key] = SCScores[index:index + n]
         index += n
-    datas = dict()
-    #datas['sa'] = SAScores_for_each_class
-    #datas['sc'] = SCScores_for_each_class
-    datas['dfr'] = DFRs_for_each_class
+
+    result_datas = dict()
+    result_datas['dfr'] = DFRs_dict
+    if not only_DFR:
+        result_datas['sa'] = SAScores_dict
+        result_datas['sc'] = SCScores_dict
 
     # Save pickle files
     with open(os.path.join(save_dir,'scores.pkl'),'wb') as f:
-        pickle.dump(datas,f)
-
-    logger('\n  ----- MCC Evaluation -----')
-    pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
-    pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
-    MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
-    mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
-        MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), \
-        MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
-    logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
-    logger(f'  {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
-
-    bin_result_dict = {
-            'bin_acc': bin_acc, 'bin_prec': bin_prec, 'bin_recall': bin_recall,'bin_critical_err': bin_critical_err,
-            }
-    mcc_result_dict = {
-            'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision, 'macro_avg_recall': macro_avg_recall,
-            'macro_avg_f1_score': macro_avg_f1_score, 
-            }
-
-    with open(csv_file, 'w', newline='') as fw:
-        wr=csv.writer(fw)
-        wr.writerow(bin_result_dict.keys())
-        wr.writerow(bin_result_dict.values())
-        wr.writerow([])
-        wr.writerow(mcc_result_dict.keys())
-        wr.writerow(mcc_result_dict.values())
-    np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
-    np.savetxt(bin_array_file, bin_conf_matrix.conf_matrix, fmt='%.0f')
+        pickle.dump(result_datas,f)
 
     return True
 
@@ -191,16 +126,16 @@ def runExp03(predictor,
     '''
     Arguments:
       predictor: DFRscore object already restored by trained model.
-      num_class: the number of classes. equals to max_step+1.
-      test_smi_list: list of list. [neg, pos1, pos2, ...]
-        length = num_class
-        Negative samples comes from first (idx=0), positive samples start from the next(idx>=1).
-      save_dir: the directory where evaluation result will be saved.
+      save_dir: The directory where Experiment result will be saved.
+      test_file_path: Path to the exp01 test file.
+      logger: utils.Logger obj.
     '''
     max_step = predictor.max_step
-    # 0. reading test files
+
+    # 1. reading test files
     each_class_sizes = []
-    test_smi_list, true_smis, false_smis = [], [], []
+    test_smi_list = []
+
     test_data = dict()
     for i in range(max_step+1):
         if i == 0:
@@ -216,29 +151,26 @@ def runExp03(predictor,
         test_smi_list += data
 
     # 1. result save path setting.
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    csv_file = os.path.join(save_dir, 'eval_metrics.csv')
     mcc_array_file= os.path.join(save_dir, 'mcc_confusion_matrix.txt')
     bin_array_file = os.path.join(save_dir, 'bin_confusion_matrix.txt')
 
-    # 2. As a binary classifier
+    # 2. Evaluate the refining ability
+    logger('Number of each data:')
     for step in range(max_step+1):
         if step == 0:
-            logger(f'  Neg: {each_class_sizes[step]}')
+            logger(f' Neg: {each_class_sizes[step]}')
         else:
-            logger(f'  Pos{step}: {each_class_sizes[step]}')
+            logger(f' Pos{step}: {each_class_sizes[step]}')
 
-    # 2-1. get scores, DFR
-    logger('\n  Calculating scores...')
-    logger('  calculating DFR...', end='\t')
-    DFRs = predictor.smiListToScores(test_smi_list)
-    logger('  Done.')
+    # Get DFR scores
+    logger('\n===== Calculating Scores =====')
+    logger('Calculating DFRscore...', end='\t')
+    DFRscores = predictor.smiListToScores(test_smi_list)
+    logger('Done.')
 
-    # 2-2. Setting for BCC test.
     M = max_step
     for max_step in range(1, M+1):
-        logger("current:", max_step)
+        logger(f"\n** Current max step: {max_step} **")
         true_label_list = []
         for idx, l in enumerate(each_class_sizes):
             if idx ==0 or idx > max_step:
@@ -247,59 +179,19 @@ def runExp03(predictor,
                 true_label_list += [1 for i in range(l)]
         true_label_list = np.array(true_label_list)
 
-        # 2-2. Use our model as as binary classification model.
-        # Threshold must be max_step+0.5
         threshold = max_step+0.5
-        bin_label_list = (DFRs<threshold).astype(int)
+        pred_label_list = (DFRscores<threshold).astype(int)
 
         # 2-3. Confusion matrix and evaluate metrics
-        logger('\n  ----- BCC Evaluation -----')
-        bin_conf_matrix= BinaryConfusionMatrix(true_list=true_label_list, pred_list=bin_label_list, neg_label = 0)
-        bin_acc, bin_prec, bin_recall, bin_critical_err = \
-                bin_conf_matrix.get_accuracy(), bin_conf_matrix.get_precision(), bin_conf_matrix.get_recall(), bin_conf_matrix.get_critical_error()
+        conf_matrix= BinCM(true_list=true_label_list, pred_list=pred_label_list, neg_label = 0)
+        acc, prec, recall, critical_err = conf_matrix.get_main_results()
         init_pos_ratio, ratio_change, filtering_ratio, = \
-                bin_conf_matrix.get_initial_pos_ratio(), bin_conf_matrix.get_ratio_change(), bin_conf_matrix.get_filtering_ratio()
-        logger('   Bin_acc, Bin_prec, Bin_recall, Bin_critical_err, auroc =')
-        logger(f'    {bin_acc}, {bin_prec}, {bin_recall}, {bin_critical_err}', end=', ')
-        #logger(get_AUROC(true_label_list, DFRs))
-        logger('   Init_pos_ratio, Ratio_change =')
-        logger(f'    {init_pos_ratio}, {ratio_change}')
-        logger('   filtering_ratio =')
-        logger(f"    Pos: {filtering_ratio['pos']}, Neg: {filtering_ratio['neg']}, Total: {filtering_ratio['tot']}")
-
-        ## 3. Setting for MCC test.
-        #true_label_list = []
-        #for idx, l in enumerate(each_class_sizes):
-        #    true_label_list += [idx for i in range(l)]
-        #true_label_list = np.array(true_label_list)
-
-        #logger('\n  ----- MCC Evaluation -----')
-        #pred_label_list = np.around(np.where(DFRs>max_step+1, max_step+1, DFRs))
-        #pred_label_list = np.where(pred_label_list==float(max_step+1), 0, pred_label_list)
-        #MCC_conf_matrix = UnbalMultiConfusionMatrix(true_list=true_label_list, pred_list=pred_label_list, numb_classes=max_step+1)
-        #mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = \
-        #    MCC_conf_matrix.get_accuracy(), MCC_conf_matrix.get_macro_avg_precision(), MCC_conf_matrix.get_macro_avg_recall(), MCC_conf_matrix.get_macro_avg_f1_score()
-        #logger('  mcc_acc, macro_avg_precision, macro_avg_recall, macro_avg_f1_score = ')
-        #logger(f'   {mcc_acc}, {macro_avg_precision}, {macro_avg_recall}, {macro_avg_f1_score}')
-
-        #mcc_result_dict = {
-        #        'mcc_acc': mcc_acc, 'macro_avg_precision': macro_avg_precision,'macro_avg_recall': macro_avg_recall, 'macro_avg_f1_score': macro_avg_f1_score
-        #        }
-
-        bin_result_dict = {
-                'bin_acc': bin_acc, 'bin_precision': bin_prec, 'bin_recall': bin_recall,
-                'init_pos_ratio': init_pos_ratio, 'ratio_change (pos:neg)': ratio_change, 'critical_err': 1-bin_acc,
-                'filtered_out_ratio_pos': filtering_ratio['pos'],'filtered_out_ratio_neg': filtering_ratio['neg'],'filtered_out_ratio_total': filtering_ratio['tot']
-                }
-
-        with open(csv_file, 'w', newline='') as fw:
-            wr=csv.writer(fw)
-            wr.writerow(bin_result_dict.keys())
-            wr.writerow(bin_result_dict.values())
-            wr.writerow([])
-        #    wr.writerow(mcc_result_dict.keys())
-        #    wr.writerow(mcc_result_dict.values())
-        #np.savetxt(mcc_array_file, MCC_conf_matrix.conf_matrix, fmt='%.0f')
-        np.savetxt(bin_array_file, bin_conf_matrix.conf_matrix, fmt='%.0f')
+                conf_matrix.get_initial_pos_ratio(), conf_matrix.get_ratio_change(), conf_matrix.get_filtering_ratio()
+        logger('Accuracy, Precision, Recall, Critical Error:')
+        logger(f' {acc}, {prec}, {recall}, {critical_err}')
+        logger('Initial pos ratio, Pos/Neg Ratio (before:after) =')
+        logger(f' {init_pos_ratio}, {ratio_change}')
+        logger('Filtering ratio =')
+        logger(f" Pos: {filtering_ratio['pos']}, Neg: {filtering_ratio['neg']}, Total: {filtering_ratio['tot']}\n")
 
     return True

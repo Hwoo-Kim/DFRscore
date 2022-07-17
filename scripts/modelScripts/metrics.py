@@ -70,6 +70,9 @@ class BinaryConfusionMatrix(ConfMatrix):
         tot_filtered_ratio = round(float(np.sum(self.conf_matrix[:,self.neg_label])/self.get_numb_data()),3)
         return {'pos':pos_filtered_ratio, 'neg':neg_filtered_ratio, 'tot':tot_filtered_ratio}
 
+    def get_main_results(self):
+        return self.get_accuracy(), self.get_precision(), self.get_recall(), self.get_critical_error()
+
 class UnbalMultiConfusionMatrix(ConfMatrix):        # for EXP01, EXP03. MCCs.
     def __init__(self, true_list, pred_list, numb_classes):
         super().__init__(true_list = true_list, pred_list = pred_list)

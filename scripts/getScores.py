@@ -7,7 +7,7 @@ import os.path as op
 import numpy as np
 
 # 0. Common functions
-def rescale_score(score_list:list, m, M, reverse=None) -> list:
+def rescale_score(score_list:list, m, M, reverse=False) -> list:
     "Rescale the given score_list into [0,1]"
     scores = np.array(score_list, dtype='float')
     rescaled_score = (scores-m)/(M-m)
