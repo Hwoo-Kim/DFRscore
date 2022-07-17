@@ -1,7 +1,7 @@
 import sys, os
 import pickle
 import multiprocessing as mp
-from .metrics import BinaryConfusionMatrix as BinCM
+from .metrics import BinaryConfusionMatrix as BinCM, get_AUROC
 sys.path.append(f'{os.path.dirname(os.path.abspath(os.path.dirname(__file__)))}')
 from getScores import getSCScore, getSAScore, rescale_score
 

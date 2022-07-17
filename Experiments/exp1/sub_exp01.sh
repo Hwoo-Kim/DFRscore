@@ -47,5 +47,5 @@ python Exp01.py \
     --test_data $data \
     --num_cores $num_cores \
     --class_size $class_size \
-    --model_path $model_path
+    --model_path $model_path \
     --only_DFR
