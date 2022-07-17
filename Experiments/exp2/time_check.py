@@ -1,11 +1,8 @@
 import argparse
 import os
-import pickle
 import sys
 import time
 from os.path import dirname
-
-from rdkit.Chem import MolFromSmiles as Mol
 
 sys.path.append(f"{dirname(dirname(os.path.abspath(dirname(__file__))))}")
 

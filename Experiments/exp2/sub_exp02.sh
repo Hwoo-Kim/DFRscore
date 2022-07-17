@@ -22,9 +22,9 @@ python time_check.py \
     --test_path $test_path \
     --use_cuda
 
-#python time_check.py \
-#    --num_cores $num_cores \
-#    --model_path $model_path \
-#    --test_path $test_path
-#
+python time_check.py \
+    --num_cores $num_cores \
+    --model_path $model_path \
+    --test_path $test_path
+
 date
