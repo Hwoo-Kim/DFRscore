@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#PBS -N DFR_ELU_FC2
-#PBS -l nodes=gnode5:ppn=4:gpus=1:gpu1
+#PBS -N DFRscore_train
+#PBS -l nodes=gnode4:ppn=4:gpus=1:gpu1
 #PBS -l walltime=7:00:00:00 
 #PBS -o out.txt
 
 ##### Run ##### 
 date
 
-#source activate DFRscore_A
 source activate DFRscore
 
 cd ~/DFRscore
@@ -23,12 +22,13 @@ num_epoch=200
 lr=0.0004
 batch_size=128
 
+feature_size=49
 n_conv_layer=6
 n_fc_layer=2
 conv_dim=256
 fc_dim=128
 
-use_scratch=true
+use_scratch=false
 
 MAIN_CMD="python train_model.py
 --data_dir $data_dir
@@ -38,6 +38,7 @@ MAIN_CMD="python train_model.py
 --num_epoch $num_epoch
 --lr $lr
 --batch_size $batch_size
+--feature_size $feature_size
 --n_conv_layer $n_conv_layer
 --n_fc_layer $n_fc_layer
 --conv_dim $conv_dim
@@ -45,6 +46,7 @@ MAIN_CMD="python train_model.py
 
 if $use_scratch; then
     MAIN_CMD=$MAIN_CMD" --use_scratch"
+fi
 
 $MAIN_CMD
 

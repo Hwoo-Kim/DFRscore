@@ -99,7 +99,7 @@ def train_DFRscore(args):
         n_GAT_layer=args.n_conv_layer,
         n_fc_layer=args.n_fc_layer,
         num_heads=args.num_heads,
-        len_features=args.len_features,
+        feature_size=args.feature_size,
         max_step=args.max_step,
         dropout=args.dropout,
     )

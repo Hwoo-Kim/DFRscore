@@ -171,14 +171,16 @@ def get_graph_feature(data_list, save_dir, batch_size, task_idx, for_inference=F
         )
 
         # 2. Node Feature
-        sssr = Chem.GetSymmSSSR(mol)
         node_feature = []
         for atom in mol.GetAtoms():
             node_feature.append(get_node_feature(atom))
+        sssr = Chem.GetSymmSSSR(mol)
         ring_feature = sssr_to_ring_feature(sssr, num_atoms)
         node_feature = np.concatenate(
             [np.stack(node_feature, axis=0), ring_feature], axis=1
         )
+        #node_feature=np.stack(node_feature, axis=0)
+
         node_feature = torch.from_numpy(node_feature)
 
         if for_inference:
@@ -221,6 +223,22 @@ def sssr_to_ring_feature(sssr, num_atoms):
             ring_feature[idx][r_size] = 1
     return ring_feature
 
+HYBRIDIZATION = [
+    Chem.rdchem.HybridizationType.UNSPECIFIED,
+    Chem.rdchem.HybridizationType.SP,
+    Chem.rdchem.HybridizationType.SP2,
+    Chem.rdchem.HybridizationType.SP3,
+    Chem.rdchem.HybridizationType.SP3D,
+    Chem.rdchem.HybridizationType.SP3D2,
+    Chem.rdchem.HybridizationType.OTHER,
+]
+
+CHIRALITY = [
+    Chem.rdchem.ChiralType.CHI_UNSPECIFIED,
+    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+    Chem.rdchem.ChiralType.CHI_OTHER,
+]
 
 def get_node_feature(atom):
     return np.array(
@@ -228,13 +246,15 @@ def get_node_feature(atom):
             str(atom.GetSymbol()),
             ["C", "N", "O", "F", "S", "Cl", "Br", "I", "B", "P", "ELSE"],
         )
-        + one_of_k_encoding(int(atom.GetDegree()), [0, 1, 2, 3, 4, "ELSE"])
-        + one_of_k_encoding(int(atom.GetExplicitValence()), [0, 1, 2, 3, 4, "ELSE"])
-        + one_of_k_encoding(int(atom.GetTotalDegree()), [0, 1, 2, 3, 4, "ELSE"])
+        + one_of_k_encoding(atom.GetTotalDegree(), [0,1,2,3,4,5,6,"ELSE"])
+        + one_of_k_encoding(atom.GetFormalCharge(), [-2,-1,0,1,2,"ELSE"])
+        + one_of_k_encoding(atom.GetTotalNumHs(), [0,1,2,3,4,"ELSE"])
+        + one_of_k_encoding(atom.GetHybridization(), HYBRIDIZATION)
+        + one_of_k_encoding(atom.GetChiralTag(), CHIRALITY)
         + [atom.GetIsAromatic()],
         dtype=bool,
     )
-    # 11+6+6+6+1 = 30
+    # 11+8+6+6+7+4+1 = 43
 
 
 # 3. Main functions
@@ -293,4 +313,7 @@ def train_data_preprocess(args):
 
 if __name__ == "__main__":
     mol = Chem.MolFromSmiles("CC=CO")
-    bonds = mol.GetBonds()
+    for atom in mol.GetAtoms():
+        print(get_node_feature(atom))
+        print(len(get_node_feature(atom)))
+        break

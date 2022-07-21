@@ -7,8 +7,6 @@ from scripts.modelScripts.train import train_DFRscore
 from scripts.utils import (get_cuda_visible_devices, logger,
                            train_save_dir_setting)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = get_cuda_visible_devices(1)
-
 
 def main_train(args):
     # 0. Reading config and directory setting
@@ -38,6 +36,7 @@ def main_train(args):
         args.data_dir = train_data_preprocess(args=args)
 
     # 2. model train
+    os.environ["CUDA_VISIBLE_DEVICES"] = get_cuda_visible_devices(1)
     train_DFRscore(args=args)
 
 
@@ -67,7 +66,7 @@ if __name__ == "__main__":
         "--num_threads", type=int, default=4, help="the number of threads"
     )
     parser.add_argument(
-        "--len_features", type=int, default=36, help="dim of atomic feature"
+        "--feature_size", type=int, default=36, help="dim of atomic feature"
     )
     parser.add_argument(
         "--n_conv_layer", type=int, default=5, help="number of convolution layers"

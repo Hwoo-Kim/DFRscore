@@ -38,7 +38,7 @@ class DFRscore(nn.Module):
     _NUM_GAT_LAYER = 6
     _NUM_FC_LAYER = 2
     _NUM_HEADS = 8
-    _LEN_FEATURES = 36
+    _FEATURE_SIZE = 36
     _MAX_STEP = 4
     _NUM_CORES = 4
     _OUT_DIM = 1
@@ -55,7 +55,7 @@ class DFRscore(nn.Module):
         torch.set_num_threads(int(self.num_cores))
 
         self.dropout_layer = nn.Dropout(self.dropout)
-        self.embedding = nn.Linear(self.len_features, self.conv_dim, bias=False)
+        self.embedding = nn.Linear(self.feature_size, self.conv_dim, bias=False)
         self.GAT_layers = nn.ModuleList(
             [
                 GraphAttentionLayer(
@@ -79,7 +79,7 @@ class DFRscore(nn.Module):
         self.device = torch.device("cpu")
 
         # zero vectors
-        self._zero_node_feature = torch.zeros((1, self.len_features)) * torch.tensor(
+        self._zero_node_feature = torch.zeros((1, self.feature_size)) * torch.tensor(
             float("nan")
         )
         self._zero_adj = torch.zeros((1, 1))
@@ -101,7 +101,7 @@ class DFRscore(nn.Module):
             "n_GAT_layer": self._NUM_GAT_LAYER,
             "n_fc_layer": self._NUM_FC_LAYER,
             "num_heads": self._NUM_HEADS,
-            "len_features": self._LEN_FEATURES,
+            "feature_size": self._FEATURE_SIZE,
             "max_step": self._MAX_STEP,
             "num_cores": self._NUM_CORES,
             "out_dim": self._OUT_DIM,
@@ -333,7 +333,7 @@ class DFRscore(nn.Module):
             + f"num_GAT_layer: {self.n_GAT_layer}\n"
             + f"num_FC_layer: {self.n_fc_layer}\n"
             + f"num_heads: {self.num_heads}\n"
-            + f"len_features: {self.len_features}\n"
+            + f"feature_size: {self.feature_size}\n"
             + f"max_step: {self.max_step}\n"
             + f"num_cores: {self.num_cores}\n"
             + f"dropout: {self.dropout}\n"
