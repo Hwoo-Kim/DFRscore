@@ -36,7 +36,7 @@ log(f"save_dir: {args.test_data}")
 log(f"test file path: {test_file_path}")
 log(f"only DFR: {args.only_DFR}")
 predictor = DFRscore.from_trained_model(args.model_path, num_cores=args.num_cores)
-predictor = predictor.cuda()
+#predictor = predictor.cuda()
 log(predictor)
 
 # 2. Get Evaluation Metrics

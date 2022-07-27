@@ -6,7 +6,8 @@
 #PBS -o out.txt
 #PBS -e error.txt
 
-source activate DFRscore
+source ~/.bashrc
+condat activate DFRscore
 cd ~/DFRscore/Experiments/exp2
 
 num_cores=4

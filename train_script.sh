@@ -8,7 +8,8 @@
 ##### Run ##### 
 date
 
-source activate DFRscore
+source ~/.bashrc
+conda activate DFRscore
 
 cd ~/DFRscore
 
