@@ -1,20 +1,13 @@
 #!/bin/bash
-CONDA_BASE=$(conda info --base)
-conda create -y -n DFRscore python=3.7.11
-source $CONDA_BASE/etc/profile.d/conda.sh
-conda activate DFRscore
 
-# 0. for plotting
-conda install -y -c conda-forge matplotlib
+micromamba create -y -n DFRscore python=3.9.13
+micromamba activate DFRscore
 
-# 1. for Retro-analysis
-conda install -y -c rdkit rdkit=2020.09.1
 pip install timeout-decorator
+micromamba install -y -c conda-forge matplotlib, scipt, numpy
+micromamba install -y -c anaconda scikit-learn
+micromamba install -y -c rdkit rdkit=2020.09.1
 
-# 2. for Training model
-conda install -y -c conda-forge scipy
-conda install -y -c conda-forge numpy
-conda install -y pytorch=1.11.0 cudatoolkit=10.2 -c pytorch
-#conda install -y pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
-#conda install -y pytorch=1.11.0 -c pytorch
-conda install -y -c anaconda scikit-learn
+micromamba install -y pytorch=1.11.0 cudatoolkit=10.2 -c pytorch
+#micromamba install -y pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
+#micromamba install -y pytorch=1.11.0 -c pytorch
