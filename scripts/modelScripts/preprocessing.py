@@ -175,7 +175,7 @@ def get_graph_feature(data_list, save_dir, batch_size, task_idx, for_inference=F
         for atom in mol.GetAtoms():
             node_feature.append(get_node_feature(atom))
         sssr = Chem.GetSymmSSSR(mol)
-        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
+        ring_feature = np.zeros([num_atoms, 6], dtype=bool)
         node_feature = np.concatenate(
             [np.stack(node_feature, axis=0), ring_feature], axis=1
         )

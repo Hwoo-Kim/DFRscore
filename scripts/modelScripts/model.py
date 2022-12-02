@@ -38,7 +38,7 @@ class DFRscore(nn.Module):
     _NUM_GAT_LAYER = 6
     _NUM_FC_LAYER = 2
     _NUM_HEADS = 8
-    _FEATURE_SIZE = 36
+    _FEATURE_SIZE = 49
     _MAX_STEP = 4
     _NUM_CORES = 4
     _OUT_DIM = 1
@@ -237,11 +237,11 @@ class DFRscore(nn.Module):
         assert isinstance(
             mol, rdkit.Chem.rdchem.Mol
         ), "input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol."
-        feature, adj = self.mol_to_graph_feature(mol)
+        feature, adj, _ = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
         adj = adj.float().unsqueeze(0).to(self.device)
-        score = self.forward(feature, adj).to("cpu").detach().numpy()
-        return torch.where(score.isnan(), torch.tensor(float(self.max_stpe + 1)), score)
+        score = self.forward(feature, adj).to("cpu").detach()
+        return torch.where(score.isnan(), torch.tensor(float(self.max_step + 1)), score)[0]
 
     def smiListToScores(self, smi_list: list, batch_size=256) -> np.array:
         with mp.Pool(self.num_cores) as p:

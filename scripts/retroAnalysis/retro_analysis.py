@@ -370,10 +370,17 @@ def retrosyntheticAnalyzer(args):
             continue
         rxn_templates.append(temp["retro_smarts"])
 
+    targets = []
     with open(os.path.join(args.root, retro_target_path), "r") as fr:
-        for i in range(args.start_index):
+        for _ in range(args.start_index):
             fr.readline()
-        targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
+        for _ in range(args.num_molecules):
+            line = fr.readline().rstrip()
+            if line:
+                targets.append(line)
+            else:
+                break
+    args.num_molecules = len(targets)
     batch_size = min(args.batch_size, args.num_molecules // args.num_cores)
     if batch_size == 0:
         batch_size = 1

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #PBS -N DFR_Exp04_FDA
-#PBS -l nodes=gnode8:ppn=16:gpus=1:gpu1
+#PBS -l nodes=cnode13:ppn=16
 #PBS -l walltime=7:00:00:00 
 
 source ~/.bashrc
@@ -11,7 +11,8 @@ cd ~/DFRscore/Experiments/exp4/
 
 num_cores=16
 model_path=/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt
-data=FDA
+#data=FDA
+data=GDBChEMBL
 
 python Exp04.py \
     --test_data $data \

@@ -271,7 +271,7 @@ def further_reaction(syn_trees, rxn_objs):
 
 
 def initial_R_bag_check(target_in_smiles: list, reactant_bag: set):
-    # target_in_smiles = Smiles(Mol(target_in_smiles))
+    target_in_smiles = Smiles(Mol(target_in_smiles))
     return target_in_smiles in reactant_bag
 
 
@@ -486,10 +486,17 @@ def retrosyntheticAnalyzer(args):
         rxn_templates.append(temp["retro_smarts"])
     RXN_NAMES = rxn_short_names
 
+    targets = []
     with open(os.path.join(args.root, retro_target_path), "r") as fr:
-        for i in range(args.start_index):
+        for _ in range(args.start_index):
             fr.readline()
-        targets = [fr.readline().rstrip() for i in range(args.num_molecules)]
+        for i in range(args.num_molecules):
+            line = fr.readline().rstrip()
+            if line:
+                targets.append(line)
+            else:
+                break
+    args.num_molecules = len(targets)
     batch_size = min(args.batch_size, args.num_molecules // args.num_cores)
     if batch_size == 0:
         batch_size = 1

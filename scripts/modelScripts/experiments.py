@@ -66,15 +66,15 @@ def runExp01(
         logger("Calculating SA score...", end="\t")
         with mp.Pool(num_cores) as p:
             SAScores = p.map(getSAScore, test_smi_list)
-        SAScores = rescale_score(SAScores, 1, 10, reverse=True)
+        #SAScores = rescale_score(SAScores, 1, 10, reverse=True)
         logger("Done.")
 
         logger("Calculating SC score...", end="\t")
         SCScores = getSCScore(test_smi_list)
-        SAScores = rescale_score(SCScores, 1, 5, reverse=True)
+        #SAScores = rescale_score(SCScores, 1, 5, reverse=True)
         logger("Done.")
     else:
-        logger("Only_DFR opiont is True, so others are not calculated.")
+        logger("Only_DFR option is True, so others are not calculated.")
 
     logger("\n===== Calculating AUROCs =====")
     logger("1. DFRscore")
@@ -84,11 +84,11 @@ def runExp01(
     if not only_DFR:
         logger("2. SA score")
         sas_auroc = get_AUROC(true_label_list, np.array(SAScores))
-        logger(f"auroc = {sas_auroc}, auroc was calculated by reversed score.")
+        logger(f"auroc = {sas_auroc}, auroc was calculated by not reversed score.")
 
         logger("3. SC score")
         scs_auroc = get_AUROC(true_label_list, np.array(SCScores))
-        logger(f"auroc = {scs_auroc}, auroc was calculated by reversed score.")
+        logger(f"auroc = {scs_auroc}, auroc was calculated by not reversed score.")
 
     # 3. Save the calculated scores
     logger("\n===== Saving the Calculated Scores =====")
@@ -191,5 +191,59 @@ def runExp03(predictor, test_file_path, logger):
         logger(
             f" Pos: {filtering_ratio['pos']}, Neg: {filtering_ratio['neg']}, Total: {filtering_ratio['tot']}\n"
         )
+
+    return True
+
+def runExp04(
+    predictor, save_dir, num_cores, test_file_path, logger, only_DFR: bool
+):
+    """
+    Arguments:
+      predictor: DFRscore object already restored by trained model.
+      save_dir: The directory where Experiment result will be saved.
+      num_cores: The number of cpu cores to use for multiprocessing.
+      test_file_path: Path to the exp04 test file.
+      logger: utils.Logger obj.
+      class_size: The number of molecules for each class (pos1, pos2, ...).
+      only_DFR: (bool) Whether calculating SA and SC scores or not.
+    """
+    max_step = predictor.max_step
+
+    # 1. reading test files
+    with open(f"{test_file_path}.smi", 'r') as fr:
+        test_smi_list = fr.read().splitlines()
+
+    # 2. Calculate scoring metrics
+    logger(f"Number of each data: {len(test_smi_list)}")
+
+    logger("\n===== Calculating Scores =====")
+    logger("Calculating DFRscore...", end="\t")
+    DFRscores = predictor.smiListToScores(test_smi_list)
+    logger("Done.")
+
+    if not only_DFR:
+        logger("Calculating SA score...", end="\t")
+        with mp.Pool(num_cores) as p:
+            SAScores = p.map(getSAScore, test_smi_list)
+        logger("Done.")
+
+        logger("Calculating SC score...", end="\t")
+        SCScores = getSCScore(test_smi_list)
+        logger("Done.")
+    else:
+        logger("Only_DFR option is True, so others are not calculated.")
+
+    logger("\n===== Saving the Calculated Scores =====")
+    results_dict = dict()
+    results_dict["smilies"] = test_smi_list
+    results_dict["dfr"] = DFRscores
+    if not only_DFR:
+        results_dict["sa"] = SAScores
+        results_dict["sc"] = SCScores
+
+    # Save pickle files
+    with open(os.path.join(save_dir, "scores.pkl"), "wb") as f:
+        pickle.dump(results_dict, f)
+    logger("Done.")
 
     return True
