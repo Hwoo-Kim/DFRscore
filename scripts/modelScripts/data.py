@@ -3,11 +3,17 @@ import pickle
 
 import numpy as np
 import torch
+
+import rdkit
+from rdkit import Chem
+from rdkit.Chem.rdmolops import GetAdjacencyMatrix
+
 from torch.nn.utils.rnn import pad_sequence as pad
 from torch.utils.data import Dataset
 
+from .preprocessing import get_node_feature, sssr_to_ring_feature
 
-class TrainDataset:
+class TrainDataset(Dataset):
     def __init__(self, data_dir, key_dir, mode):
         assert mode in [
             "train",
@@ -31,22 +37,72 @@ class TrainDataset:
         return data
 
 
-class InferenceDataset:
-    def __init__(self, features, adjs, N_atoms):
+class InferenceDataset(Dataset):
+    def __init__(self, smi_list:list=None, mol_list:list=None):
         super().__init__()
-        self.features = features
-        self.adjs = adjs
-        self.N_atoms = N_atoms
+        if all([smi_list, mol_list]) or not any([smi_list, mol_list]):
+            raise "input for InferenceDataset is wrong."
+
+        if smi_list:
+            self.data_list = smi_list
+            self.data_type = "SMILES"
+        elif mol_list:
+            self.data_list = mol_list
+            self.data_type = "Mol"
 
     def __len__(self):
-        return len(self.features)
+        return len(self.data_list)
 
     def __getitem__(self, idx):
         data = dict()
-        data["feature"] = self.features[idx]
-        data["adj"] = self.adjs[idx]
-        data["N_atom"] = self.N_atoms[idx]
+
+        if self.data_type == "SMILES":
+            feature, adj, n_atom = self._smi_to_graph_feature(self.data_list[idx])
+
+        elif self.data_type == "Mol":
+            feature, adj, n_atom = self._mol_to_graph_feature(self.data_list[idx])
+
+        data["feature"] = feature
+        data["adj"] = adj
+        data["N_atom"] = n_atom
+
         return data
+
+    @classmethod
+    def _smi_to_graph_feature(cls, smi:str):
+        try:
+            mol = Chem.MolFromSmiles(smi)
+        except:
+            return None, None, None
+        if mol:
+            return cls._mol_to_graph_feature(mol)
+        else:
+            return None, None, None
+
+    @staticmethod
+    def _mol_to_graph_feature(mol:Chem.rdchem.Mol):
+        if not isinstance(mol, Chem.rdchem.Mol):
+            return None, None, None
+
+        num_atoms = mol.GetNumAtoms()
+
+        # 1. Adjacency
+        adj = torch.from_numpy(
+            np.asarray(GetAdjacencyMatrix(mol), dtype=bool)
+            + np.eye(num_atoms, dtype=bool)
+        )
+
+        # 2. Node Feature
+        sssr = Chem.GetSymmSSSR(mol)
+        node_feature = []
+        for atom in mol.GetAtoms():
+            node_feature.append(get_node_feature(atom))
+        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
+        node_feature = np.concatenate(
+            [np.stack(node_feature, axis=0), ring_feature], axis=1
+        )
+        node_feature = torch.from_numpy(node_feature)
+        return node_feature, adj, num_atoms
 
 
 def gat_collate_fn(batch):
@@ -57,46 +113,55 @@ def gat_collate_fn(batch):
     node_batch = []
     label_batch = []
 
-    # max_num_atom = np.max(np.array([b['N_atom'] for b in batch]))
+    
     max_num_atom = np.max(np.array([b["feature"].size(0) for b in batch]))
     node_dim = batch[0]["feature"].size(-1)
     for b in batch:
-        num_atoms = b["feature"].size(0)
+        if b["feature"] is None:
+            adj_batch.append(torch.nan)
+            node_batch.append(torch.nan)
 
-        adj = torch.zeros((max_num_atom, max_num_atom))
-        adj[:num_atoms, :num_atoms] = b["adj"]
-        adj_batch.append(adj)
+        else:
+            num_atoms = b["feature"].size(0)
 
-        node_batch.append(b["feature"])
-        label_batch.append(b["label"])
+            adj = torch.zeros((max_num_atom, max_num_atom))
+            adj[:num_atoms, :num_atoms] = b["adj"]
+            adj_batch.append(adj)
 
-    sample["adj"] = torch.stack(adj_batch, 0)
-    sample["feature"] = pad(node_batch, batch_first=True, padding_value=0.0)
-    sample["label"] = torch.tensor(label_batch)
-    return sample
-
-
-def infer_collate_fn(batch):
-    # adjacency: [N,N]
-    # node_feature: [N,node]
-    sample = dict()
-    adj_batch = []
-    node_batch = []
-
-    max_num_atom = np.max(np.array([b["N_atom"] for b in batch]))
-    node_dim = batch[0]["feature"].size(-1)
-    for b in batch:
-        num_atoms = b["feature"].size(0)
-
-        adj = torch.zeros((max_num_atom, max_num_atom))
-        adj[:num_atoms, :num_atoms] = b["adj"]
-        adj_batch.append(adj)
-
-        node_batch.append(b["feature"])
+            node_batch.append(b["feature"])
+            if "label" in b:
+                label_batch.append(b["label"])
 
     sample["adj"] = torch.stack(adj_batch, 0)
     sample["feature"] = pad(node_batch, batch_first=True, padding_value=0.0)
+
+    if len(label_batch) != 0:
+        sample["label"] = torch.tensor(label_batch)
+
     return sample
+
+
+#def infer_collate_fn(batch):
+#    # adjacency: [N,N]
+#    # node_feature: [N,node]
+#    sample = dict()
+#    adj_batch = []
+#    node_batch = []
+#
+#    max_num_atom = np.max(np.array([b["N_atom"] for b in batch]))
+#    node_dim = batch[0]["feature"].size(-1)
+#    for b in batch:
+#        num_atoms = b["feature"].size(0)
+#
+#        adj = torch.zeros((max_num_atom, max_num_atom))
+#        adj[:num_atoms, :num_atoms] = b["adj"]
+#        adj_batch.append(adj)
+#
+#        node_batch.append(b["feature"])
+#
+#    sample["adj"] = torch.stack(adj_batch, 0)
+#    sample["feature"] = pad(node_batch, batch_first=True, padding_value=0.0)
+#    return sample
 
 
 # if __name__=='__main__':

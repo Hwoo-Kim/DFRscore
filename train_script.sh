@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -N DFRscore_train
-#PBS -l nodes=gnode4:ppn=4:gpus=1:gpu1
+#PBS -N DFRscore_no_ring
+#PBS -l nodes=gnode3:ppn=4:gpus=1:gpu1
 #PBS -l walltime=7:00:00:00 
 #PBS -o out.txt
 
@@ -15,7 +15,8 @@ cd ~/DFRscore
 
 data_dir=save/PubChem/retro_result/
 model_save_name=DFRscore
-data_preprocessing=basic_process
+#data_preprocessing=basic_process
+data_preprocessing=no_ring
 
 # Training parameters
 num_data=250000

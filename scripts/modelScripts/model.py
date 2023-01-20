@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
@@ -13,7 +14,7 @@ import rdkit
 from rdkit import Chem
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 
-from .data import InferenceDataset, infer_collate_fn
+from .data import InferenceDataset, gat_collate_fn
 from .layers import FeedForward, GraphAttentionLayer
 from .preprocessing import get_node_feature, sssr_to_ring_feature
 
@@ -190,34 +191,34 @@ class DFRscore(nn.Module):
         else:
             return None, None, None
 
-    def mols_to_graph_feature(self, mol_list):
-        """
-        Args:
-          mol_list: list of RDKit molecule objects.
-        Returns:
-          node_feats: torch tensor
-          adjs: torch tensor
-          N_atoms: list
-        """
+    #def mols_to_graph_feature(self, mol_list):
+    #    """
+    #    Args:
+    #      mol_list: list of RDKit molecule objects.
+    #    Returns:
+    #      node_feats: torch tensor
+    #      adjs: torch tensor
+    #      N_atoms: list
+    #    """
 
-        since = time.time()
-        with mp.Pool(processes=self.num_cores) as p:
-            result = p.map(self.mol_to_graph_feature, mol_list)
+    #    since = time.time()
+    #    with mp.Pool(processes=self.num_cores) as p:
+    #        result = p.map(self.mol_to_graph_feature, mol_list)
 
-        node_feats, adjs, N_atoms = [], [], []
-        for node_feature, adj, num_atoms in result:
-            if node_feature == None:
-                node_feats.append(self._zero_node_feature)
-                adjs.append(self._zero_adj)
-                N_atoms.append(0)
-            else:
-                node_feats.append(node_feature)
-                adjs.append(adj)
-                N_atoms.append(num_atoms)
+    #    node_feats, adjs, N_atoms = [], [], []
+    #    for node_feature, adj, num_atoms in result:
+    #        if node_feature == None:
+    #            node_feats.append(self._zero_node_feature)
+    #            adjs.append(self._zero_adj)
+    #            N_atoms.append(0)
+    #        else:
+    #            node_feats.append(node_feature)
+    #            adjs.append(adj)
+    #            N_atoms.append(num_atoms)
 
-        return node_feats, adjs, N_atoms
+    #    return node_feats, adjs, N_atoms
 
-    def smiToScore(self, smi: str) -> torch.tensor:
+    def smiToScore(self, smi: str) -> float:
         assert isinstance(
             smi, str
         ), "input of smiToScore method must be a string of SMILES."
@@ -233,33 +234,54 @@ class DFRscore(nn.Module):
             )
         return self.molToScore(mol)
 
-    def molToScore(self, mol: object):
+    def molToScore(self, mol: object) -> float:
         assert isinstance(
             mol, rdkit.Chem.rdchem.Mol
         ), "input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol."
         feature, adj, _ = self.mol_to_graph_feature(mol)
         feature = feature.float().unsqueeze(0).to(self.device)
         adj = adj.float().unsqueeze(0).to(self.device)
-        score = self.forward(feature, adj).to("cpu").detach()
-        return torch.where(score.isnan(), torch.tensor(float(self.max_step + 1)), score)[0]
+        score = self.forward(feature, adj).squeeze(-1).to("cpu").detach()
+        if score.isnan():
+            return float(self.max_step + 1)
+        else:
+            return score.item()
 
     def smiListToScores(self, smi_list: list, batch_size=256) -> np.array:
-        with mp.Pool(self.num_cores) as p:
-            mol_list = p.map(self._mol_from_smiles, smi_list)
-        return self.molListToScores(mol_list, batch_size)
-
-    def molListToScores(self, mol_list: list, batch_size=256) -> np.array:
-        t1 = time.time()
-        node_feats, adjs, N_atoms = self.mols_to_graph_feature(mol_list)
-        t2 = time.time()
-
-        data_set = InferenceDataset(node_feats, adjs, N_atoms)
+        data_set = InferenceDataset(smi_list=smi_list)
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
             shuffle=False,
-            collate_fn=infer_collate_fn,
-            num_workers=0,
+            collate_fn=gat_collate_fn,
+            num_workers=self.num_cores,
+        )
+        t = 0
+
+        scores = []
+        since = time.time()
+        for batch in data_loader:
+            t += (time.time()-since)
+            x = batch["feature"].float().to(self.device)
+            A = batch["adj"].float().to(self.device)
+            scores.append(self.forward(x, A).to("cpu").detach())
+            since = time.time()
+
+        scores = torch.cat(scores).squeeze(-1)
+        scores = torch.where(
+            scores.isnan(), torch.tensor(float(self.max_step + 1)), scores
+        )
+        #print(f"Preprocessing time:{t}")
+        return scores.numpy()
+
+    def molListToScores(self, mol_list: list, batch_size=256) -> np.array:
+        data_set = InferenceDataset(mol_list=mol_list)
+        data_loader = DataLoader(
+            data_set,
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=gat_collate_fn,
+            num_workers=self.num_cores,
         )
 
         scores = []
@@ -273,7 +295,22 @@ class DFRscore(nn.Module):
         )
         return scores.numpy()
 
-    def filterWithScore(self, data_list, criteria):
+    def _preprocessing_time_check(self, smi_list:list, batch_size=256) -> float:
+        since = time.time()
+        data_set = InferenceDataset(smi_list=smi_list)
+        data_loader = DataLoader(
+            data_set,
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=gat_collate_fn,
+            num_workers=self.num_cores,
+        )
+        for batch in data_loader:
+            continue
+        end = time.time()
+        return end-since
+
+    def filterWithScore(self, data_list, criteria) -> Tuple[List, List]:
         """
         Args:
           data_list: list of SMILES or rdchem.Mol.
@@ -344,7 +381,7 @@ class DFRscore(nn.Module):
 
 if __name__ == "__main__":
     from rdkit.Chem import MolFromSmiles as Mol
-    from rdkit.Chem.rdmolops import GetAdjacencyMatrix
+    from rdkit.Chem.rdmolops import tGetAdjacencyMatrix
 
     smi1, smi2, smi3 = "CCCO", "C1CCCCC1", "CCCCCOCC"
     print(smi1, smi2, smi3)
