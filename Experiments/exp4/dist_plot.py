@@ -1,73 +1,77 @@
 import os
-import pickle
 import sys
+import pickle
+import pandas as pd
+from os.path import dirname
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 
-# 1. Reading result file
-target_data = sys.argv[1]
-test_file_path = f"./{target_data}/scores.pkl"
-with open(test_file_path, "rb") as f:
-    data_dict = pickle.load(f)
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy("file_system")
 
-dfrs = data_dict['dfr']
-sas = data_dict['sa']
-scs = data_dict['sc']
+proj_dir = dirname(dirname(os.path.abspath(dirname(__file__))))
+sys.path.append(proj_dir)
 
-# 2. Data plot
-plt.subplot(313)
-ax1 = plt.subplot(311)
-ax1.hist(dfrs, cumulative=False, bins=50, label='cumulative=False')
-ax2 = plt.subplot(312)
-ax2.hist(sas, cumulative=False, bins=50, label='cumulative=False')
-ax3 = plt.subplot(313)
-ax3.hist(scs, cumulative=False, bins=50, label='cumulative=False')
+from scripts.modelScripts.model import DFRscore
 
-plt.savefig(f"{target_data}/{target_data}.png", format="png")
-exit()
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIG_SIZE = 12
+BIGGER_SIZE = 14
 
-plot_list = ["1", "2", "3", "4"]
-color_list = [
-    np.array([50, 50, 50]),
-    np.array([100, 100, 233]),
-    np.array([200, 128, 50]),
-    np.array([230, 30, 30]),
-]
-for i in range(len(color_list)):
-    color_list[i] = color_list[i] / 255
-
-# print (data_dict.keys())
-
-metric = "dfr"
-plt.figure(figsize=[6.4, 4.8])
-data_plot = []
-data = data_dict[metric]
-ax = plt.subplot(1, 1, 1)
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE-1)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+plt.rc('legend', title_fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIG_SIZE)  # fontsize of the figure title
 
 
-ax.set_xlabel("True label", fontsize=15)
-ax.set_ylabel("Pred label", fontsize=15)
-# ax.set_title(metric_name_dict[metric])
-ax.set_title(target_data, fontsize=25)
-ax.tick_params(axis="x", labelsize=12)
-ax.tick_params(axis="y", labelsize=12)
-for label in plot_list:
-    data_plot.append(data[label])
-    for d in data[label]:
-        if d < 1:
-            print(d)
+def make_dist(model_path:str, target_dir:str, num_cores:int=4, use_cuda:bool=False):
+    # load model
+    model = DFRscore.from_trained_model(model_path, num_cores = num_cores)
+    if use_cuda:
+        model.cuda()
 
-positions = list(range(1, len(plot_list) + 1))
-figure_plot = plt.violinplot(
-    data_plot, positions=positions, showextrema=True, points=50
-)
-for idx in range(len(color_list)):
-    violin = figure_plot["bodies"][idx]
-    violin.set_facecolor(color_list[idx])
-    violin.set_edgecolor("black")
-    violin.set_alpha(1)
-    bar = figure_plot["cbars"]
-    bar.set_color([0, 0, 0])
+    dataset_name = target_dir.split('/')[-2]
+    result = {"DFRscore":[], "FRA label":[]}
+    data_list = ["pos1.smi", "pos2.smi", "pos3.smi", "pos4.smi", "neg4.smi"]
+    for idx, file in enumerate(data_list):
+        if idx == 4: idx = "unsolved"
+        else: idx = str(idx+1)
 
-plt.savefig(f"{target_data}/{target_data}.png", format="png")
+        # read and evaluate result file
+        file_path = os.path.join(target_dir, file)
+        with open(file_path, 'r') as fr:
+            data=fr.read().splitlines()
+        dfrscores = model.smiListToScores(data)
+        result["DFRscore"] += list(dfrscores)
+        result["FRA label"] += [idx] * len(data)
+
+    # make dataframe
+    df = pd.DataFrame.from_dict(result)
+
+    # plot figure
+    plt.figure()
+    #ax = sns.kdeplot(data=df, x="DFRscore", hue="FRA label",  multiple="layer", common_norm=False, fill=False, palette=COLOR_LIST)
+    ax = sns.kdeplot(data=df, x="DFRscore", hue="FRA label",  multiple="layer", common_norm=False, fill=False)
+    #ax.set_title(dataset_name, pad=20, fontsize=20)
+    for i in range(1,5):
+        ax.axvline(x=i+0.5, color="#D0D3D4", ymin=0, ymax=1, linestyle="--")
+        plt.text(i+0.2,1.53, f"c={i+0.5}", fontsize=MEDIUM_SIZE+1)
+    ax.set_xticks(list(range(0,9)))
+    ax.set_yticks(np.arange(0,7)/4)
+
+    # save the figure
+    plt.savefig(f"{dataset_name}.png", format="png")
+    return True
+
+
+if __name__ == "__main__":
+    make_dist("/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt", "/home/hwkim/DFRscore/save/GGM/exp03")
+    make_dist("/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt", "/home/hwkim/DFRscore/save/GDBChEMBL/exp03")
+

@@ -1,11 +1,12 @@
 #!/bin/bash
 
-#PBS -N DFR_Exp04_FDA
+#PBS -N DFR_Exp04_GGM
 #PBS -l nodes=cnode13:ppn=16
 #PBS -l walltime=7:00:00:00 
 
+shopt -s expand_aliases
 source ~/.bashrc
-conda activate DFRscore
+mamba activate DFRscore
 
 cd ~/DFRscore/Experiments/exp4/
 

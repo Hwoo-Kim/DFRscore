@@ -4,8 +4,9 @@
 #PBS -l nodes=gnode4:ppn=16:gpus=1:gpu1
 #PBS -l walltime=7:00:00:00 
 
+shopt -s expand_aliases
 source ~/.bashrc
-conda activate DFRscore
+mamba activate DFRscore
 
 cd ~/DFRscore/Experiments/exp3/
 
