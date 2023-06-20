@@ -71,7 +71,7 @@ def make_dist(model_path:str, target_dir:str, num_cores:int=4, use_cuda:bool=Fal
     ax.set_yticks(np.arange(0,7)/4)
 
     # save the figure
-    plt.savefig(f"{dataset_name}.png", format="png")
+    plt.savefig(f"{dataset_name}.pdf", format="pdf")
     print("Done.")
     return True
 
