@@ -4,6 +4,8 @@ import pickle
 import sys
 from os.path import dirname
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 import numpy as np
 
 import torch.multiprocessing
@@ -16,47 +18,77 @@ from scripts.modelScripts.experiments import runExp01
 from scripts.modelScripts.model import DFRscore
 from scripts.utils import logger
 
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIG_SIZE = 12
+BIGGER_SIZE = 14
+
+#plt.rc('font', size=SMALL_SIZE)             # controls default text sizes
+#plt.rc('axes', titlesize=MEDIUM_SIZE)       # fontsize of the axes title
+#plt.rc('axes', labelsize=BIGGER_SIZE-1)     # fontsize of the x and y labels
+#plt.rc('xtick', labelsize=BIGGER_SIZE)      # fontsize of the tick labels
+#plt.rc('ytick', labelsize=BIGGER_SIZE)      # fontsize of the tick labels
+#plt.rc('legend', title_fontsize=MEDIUM_SIZE)    # legend fontsize
+#plt.rc('legend', fontsize=MEDIUM_SIZE)      # legend fontsize
+#plt.rc('figure', titlesize=BIG_SIZE)        # fontsize of the figure title
+
+
 def make_violin(target_name):
     # Read result file
     test_file_path = f"{target_name}/scores.pkl"
     with open(test_file_path, "rb") as f:
         data_dict = pickle.load(f)
-    save_fig_path = f"{target_name}.png"
+    save_fig_path = f"{target_name}.pdf"
     
     # Plot setting
-    plot_list = ["1", "2", "3", "4", "0"]   # "0" means "unsolved"
-    color_list = [
+    plot_order = ["1", "2", "3", "4", "unsolved"]
+    color_list = np.array([
         [4, 96, 217],       # 1
         [4, 227, 186],      # 2
         [200, 159, 5],      # 3
         [242, 92, 5],       # 4
         [153, 0, 0],        # unsolved
-    ]
-    color_list = np.array(color_list)/256
-    #for i in range(len(color_list)):
-    #    color_list[i] = color_list[i] / 255
-    
-    # Figure configuration
-    metric = "dfr"
-    plt.figure(figsize=[6.4, 4.8])
+    ])
+    color_list = color_list/256
+    data = data_dict["dfr"]
     data_plot = []
-    data = data_dict[metric]
-    ax = plt.subplot(1, 1, 1)
-    ax.set_xlabel("$y_{true}$", fontsize=15)
-    ax.set_xticks(ticks=np.arange(5)+1, labels=["1", "2", "3", "4", "unsolved"])
-    ax.set_ylabel("$y_{pred}$", fontsize=15)
-    # ax.set_title(metric_name_dict[metric])
-    ax.set_title(target_name, fontsize=25)
-    ax.tick_params(axis="x", labelsize=12)
-    ax.tick_params(axis="y", labelsize=12)
-    for label in plot_list:
-        data_plot.append(data[label])
-        #for d in data[label]:
-        #    if d < 0.5:
-        #        print(d)
+    for label in plot_order:
+        if label == "unsolved":
+            data_plot.append(data["0"])
+        else:
+            data_plot.append(data[label])
+    
+    # data setting
+    #original_data = data_dict["dfr"]
+    #data = {"score":[], "label":[]}
+    ##for key, val in original_data.items():
+    #for key in plot_order:
+    #    if key == "unsolved": 
+    #        val = original_data["0"]
+    #    else:
+    #        val = original_data[key]
+
+    #    data["label"] += [key]*len(val)
+    #    data["score"] += list(val)
+    #data = pd.DataFrame.from_dict(data)
+    #print(data)
+
+    ## plot figure
+    #fig = sns.violinplot(data=data, x="label", y="score")
+
+    # Figure configuration
+    #ax = plt.subplot(1, 1, 1)
+    fig = plt.figure(figsize=[6.4, 5.2])
+    #plt.xlabel("$y_{true}$", fontsize=20)
+    #plt.ylabel("$y_{pred}$", fontsize=20)
+    plt.xticks(ticks=np.arange(5)+1, labels=["1", "2", "3", "4", "unsolved"], fontsize=20)
+    plt.yticks(fontsize=20)
+    fig.suptitle(target_name, fontsize=25)
+    #ax.tick_params(axis="x", labelsize=15)
+    #ax.tick_params(axis="y", labelsize=15)
     
     # Plot the distribution
-    positions = list(range(1, len(plot_list) + 1))
+    positions = list(range(1, len(plot_order) + 1))
     figure_plot = plt.violinplot(
         data_plot, positions=positions, showextrema=True, points=50
     )
@@ -68,7 +100,7 @@ def make_violin(target_name):
         bar = figure_plot["cbars"]
         bar.set_color([0, 0, 0])
     
-    plt.savefig(save_fig_path, format="png")
+    plt.savefig(save_fig_path, format="pdf")
     return save_fig_path
 
 
