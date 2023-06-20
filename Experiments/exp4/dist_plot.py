@@ -21,17 +21,21 @@ MEDIUM_SIZE = 10
 BIG_SIZE = 12
 BIGGER_SIZE = 14
 
-plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
-plt.rc('axes', labelsize=BIGGER_SIZE-1)    # fontsize of the x and y labels
-plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
-plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+plt.rc('font', size=SMALL_SIZE)             # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)       # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE-1)     # fontsize of the x and y labels
+plt.rc('xtick', labelsize=BIG_SIZE)      # fontsize of the tick labels
+plt.rc('ytick', labelsize=BIG_SIZE)      # fontsize of the tick labels
 plt.rc('legend', title_fontsize=MEDIUM_SIZE)    # legend fontsize
-plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
-plt.rc('figure', titlesize=BIG_SIZE)  # fontsize of the figure title
+plt.rc('legend', fontsize=MEDIUM_SIZE)      # legend fontsize
+plt.rc('figure', titlesize=BIG_SIZE)        # fontsize of the figure title
 
 
 def make_dist(model_path:str, target_dir:str, num_cores:int=4, use_cuda:bool=False):
+    print(f"\nmodel_path: {model_path}")
+    print(f"target_dir: {target_dir}")
+    print(f"num_cores: {num_cores}")
+    print(f"use_cuda: {use_cuda}")
     # load model
     model = DFRscore.from_trained_model(model_path, num_cores = num_cores)
     if use_cuda:
@@ -68,10 +72,11 @@ def make_dist(model_path:str, target_dir:str, num_cores:int=4, use_cuda:bool=Fal
 
     # save the figure
     plt.savefig(f"{dataset_name}.png", format="png")
+    print("Done.")
     return True
 
 
 if __name__ == "__main__":
-    make_dist("/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt", "/home/hwkim/DFRscore/save/GGM/exp03")
-    make_dist("/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt", "/home/hwkim/DFRscore/save/GDBChEMBL/exp03")
+    model_path, target_dir = sys.argv[1], sys.argv[2]
+    make_dist(model_path, target_dir)
 
