@@ -1,3 +1,4 @@
+from typing import Tuple
 import argparse
 import copy
 import os
@@ -72,7 +73,7 @@ def test(model, loss_fn, test_data_loader):
     return test_loss_list
 
 
-def train_DFRscore(args):
+def train_DFRscore(args)->Tuple[int, float]:
     # 0. initial setting
     data_dir = args.data_dir
     save_dir = args.save_dir
@@ -214,3 +215,5 @@ def train_DFRscore(args):
     ## Logging
     # log()
     # log(f'  ----- Test result -----',f'  test loss: {test_loss}')
+
+    return best_epoch, best_loss.item()

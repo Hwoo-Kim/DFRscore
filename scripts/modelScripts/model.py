@@ -112,6 +112,11 @@ class DFRscore(nn.Module):
 
         self.__dict__.update(args)
 
+    def set_processors(self, num_cores:int):
+        self.num_cores = num_cores
+        torch.set_num_threads(int(self.num_cores))
+        return
+
     @classmethod
     def from_trained_model(cls, *args, **kwargs):
         if "path_to_model" in kwargs and args:

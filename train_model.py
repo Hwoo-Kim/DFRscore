@@ -4,8 +4,7 @@ from datetime import datetime
 
 from scripts.modelScripts.preprocessing import train_data_preprocess
 from scripts.modelScripts.train import train_DFRscore
-from scripts.utils import (get_cuda_visible_devices, logger,
-                           train_save_dir_setting)
+from scripts.utils import get_cuda_visible_devices, logger, train_save_dir_setting, set_random_seed
 
 
 def main_train(args):
@@ -14,6 +13,25 @@ def main_train(args):
     args.data_dir, args.save_dir = train_save_dir_setting(args)
     args.logger = logger(os.path.join(args.save_dir, "training.log"))
     args.logger(f"Model training save directory is:\n  {args.save_dir}")
+
+    # Set notion logging
+    if args.database_id != "":
+        args.logger.set_notion_logging(
+            database_id=args.database_id,
+            database_props={
+                "Model Name": {"title": {}},
+                "n_conv_layer": {"number": {}},
+                "n_fc_layer": {"number": {}},
+                "conv_dim": {"number": {}},
+                "fc_dim": {"number": {}},
+                "best_epoch": {"number": {}},
+                "best_loss": {"number": {}},
+            },
+        )
+
+    # Set random random seed
+    if args.random_seed != -1:
+        set_random_seed(seed=args.random_seed)
 
     # 1. Training data preprocessing
     now = datetime.now()
@@ -37,7 +55,20 @@ def main_train(args):
 
     # 2. model train
     os.environ["CUDA_VISIBLE_DEVICES"] = get_cuda_visible_devices(1)
-    train_DFRscore(args=args)
+    best_epoch, best_loss = train_DFRscore(args=args)
+    if args.database_id != "":
+        args.logger.notion_logging(
+            new_data={
+                "Model Name": {"title": [{"text": {"content": args.save_dir.split("/")[-1]}}]},
+                "n_conv_layer": {"number": args.n_conv_layer},
+                "n_fc_layer": {"number": args.n_fc_layer},
+                "conv_dim": {"number": args.conv_dim},
+                "fc_dim": {"number": args.fc_dim},
+                "best_epoch": {"number": best_epoch},
+                "best_loss": {"number": best_loss},
+            }
+        )
+
 
 
 # main operation:
@@ -115,7 +146,19 @@ if __name__ == "__main__":
         "--min_lr",
         type=float,
         default=1e-7,
-        help=" A lower bound on the learning rate of all param groups",
+        help="A lower bound on the learning rate of all param groups",
+    )
+    parser.add_argument(
+        "--random_seed",
+        type=int,
+        default=-1,
+        help="Random seed for the model training",
+    )
+    parser.add_argument(
+        "--database_id",
+        type=str,
+        default="",
+        help="The notion database id to be used for loss logging",
     )
     args = parser.parse_args()
     main_train(args)

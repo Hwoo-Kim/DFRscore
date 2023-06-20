@@ -1,24 +1,5 @@
-import errno
 import os
-import pickle
-import queue
-import random
-import shutil
-import signal
 import subprocess
-import sys
-import time
-from functools import wraps
-
-from rdkit import Chem, RDLogger
-from rdkit.Chem import AllChem
-from rdkit.Chem import MolFromSmiles as Mol
-from rdkit.Chem import MolToSmiles as Smiles
-from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
-from rdkit.Chem.Descriptors import ExactMolWt
-from rdkit.Chem.FragmentMatcher import FragmentMatcher
-
-RDLogger.DisableLog("rdApp.*")
 
 
 class logger:
@@ -66,6 +47,37 @@ class logger:
             if not v in _skip_args:
                 self(f"  {v}: {d[v]}")
 
+    def set_notion_logging(self, database_id: str, database_props: dict):
+        import dotenv
+        from notion_client import Client
+
+        # from datetime import datetime
+
+        config = dotenv.dotenv_values(".env")
+        notion_secret = config.get("NOTION_TOKEN")
+        self.client = Client(auth=notion_secret)
+        self.database_id = database_id
+
+        self.client.databases.update(
+            database_id=database_id, properties=database_props
+        )
+        return
+
+    def notion_logging(self, new_data: dict):
+        # Add data to the database with Notion API
+        self.client.pages.create(parent={"database_id": self.database_id}, properties=new_data)
+        return
+
+def set_random_seed(seed:int):
+    import random
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 def retro_save_dir_setting(root, args):
     target_data_name = args.retro_target.split("/")[-1].split(".smi")[0]
@@ -95,9 +107,9 @@ def train_save_dir_setting(args):
 
     if os.path.exists(save_dir):
         i = 2
-        while os.path.exists(f"{save_dir}{i}"):
+        while os.path.exists(f"{save_dir}_{i}"):
             i += 1
-        save_dir = f"{save_dir}{i}"
+        save_dir = f"{save_dir}_{i}"
     os.mkdir(save_dir)
     return data_dir, save_dir
 
