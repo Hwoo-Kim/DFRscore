@@ -3,18 +3,18 @@ import pickle
 import queue
 import random
 import time
-from datetime import datetime
-from multiprocessing import Process, Queue, current_process
+from multiprocessing import Process, Queue
 
 import numpy as np
 import torch
 from rdkit import Chem
 from rdkit.Chem import MolFromSmiles as Mol
-from rdkit.Chem.rdchem import ChiralType
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 
 DATA_SPLIT_SEED = 1024
 PROBLEM = "regression"
+
+
 # 1. Data splitting functions
 def processing_data(data_dir, max_step, logger, num_data):
     global DATA_SPLIT_SEED, PROBLEM
@@ -38,7 +38,7 @@ def processing_data(data_dir, max_step, logger, num_data):
         smis_w_label.append(each_class)
 
     # handling data size
-    logger(f"  Number of data for each class (Neg, pos1, pos2, ...):")
+    logger("  Number of data for each class (Neg, pos1, pos2, ...):")
     for i in range(max_step + 1):
         logger(f"  {len(smis_w_label[i])}\t", end="")
     each_class_size = num_data // (max_step * 2)
@@ -49,9 +49,7 @@ def processing_data(data_dir, max_step, logger, num_data):
         else:
             class_sizes.append(each_class_size)
     logger(f"\n  Given total number of data is: {num_data}")
-    logger(
-        f"  To achieve that, each class should be lager than (Neg, pos1, pos2, ...):"
-    )
+    logger("  To achieve that, each class should be lager than (Neg, pos1, pos2, ...):")
     for i in range(max_step + 1):
         logger(f"  {class_sizes[i]}", end="\t")
     for i in range(max_step + 1):
@@ -175,11 +173,12 @@ def get_graph_feature(data_list, save_dir, batch_size, task_idx, for_inference=F
         for atom in mol.GetAtoms():
             node_feature.append(get_node_feature(atom))
         sssr = Chem.GetSymmSSSR(mol)
-        ring_feature = np.zeros([num_atoms, 6], dtype=bool)
+        # ring_feature = np.zeros([num_atoms, 6], dtype=bool)   # For ablation study
+        ring_feature = sssr_to_ring_feature(sssr, num_atoms)
         node_feature = np.concatenate(
             [np.stack(node_feature, axis=0), ring_feature], axis=1
         )
-        #node_feature=np.stack(node_feature, axis=0)
+        # node_feature=np.stack(node_feature, axis=0)
 
         node_feature = torch.from_numpy(node_feature)
 
@@ -223,6 +222,7 @@ def sssr_to_ring_feature(sssr, num_atoms):
             ring_feature[idx][r_size] = 1
     return ring_feature
 
+
 HYBRIDIZATION = [
     Chem.rdchem.HybridizationType.UNSPECIFIED,
     Chem.rdchem.HybridizationType.SP,
@@ -240,15 +240,16 @@ CHIRALITY = [
     Chem.rdchem.ChiralType.CHI_OTHER,
 ]
 
+
 def get_node_feature(atom):
     return np.array(
         one_of_k_encoding(
             str(atom.GetSymbol()),
             ["C", "N", "O", "F", "S", "Cl", "Br", "I", "B", "P", "ELSE"],
         )
-        + one_of_k_encoding(atom.GetTotalDegree(), [0,1,2,3,4,5,6,"ELSE"])
-        + one_of_k_encoding(atom.GetFormalCharge(), [-2,-1,0,1,2,"ELSE"])
-        + one_of_k_encoding(atom.GetTotalNumHs(), [0,1,2,3,4,"ELSE"])
+        + one_of_k_encoding(atom.GetTotalDegree(), [0, 1, 2, 3, 4, 5, 6, "ELSE"])
+        + one_of_k_encoding(atom.GetFormalCharge(), [-2, -1, 0, 1, 2, "ELSE"])
+        + one_of_k_encoding(atom.GetTotalNumHs(), [0, 1, 2, 3, 4, "ELSE"])
         + one_of_k_encoding(atom.GetHybridization(), HYBRIDIZATION)
         + one_of_k_encoding(atom.GetChiralTag(), CHIRALITY)
         + [atom.GetIsAromatic()],
@@ -275,7 +276,7 @@ def train_data_preprocess(args):
     # 2. Get Feature Tensors
     save_dir = os.path.join(preprocess_dir, "generated_data")
     os.mkdir(save_dir)
-    log(f"  Generating features...", end="")
+    log("  Generating features...", end="")
     batch_size = 10000
     tasks = Queue()
     procs = []
@@ -312,8 +313,11 @@ def train_data_preprocess(args):
 
 
 if __name__ == "__main__":
-    mol = Chem.MolFromSmiles("CC=CO")
+    mol = Chem.MolFromSmiles("Cc1ccccc1-C2CCC2")
     for atom in mol.GetAtoms():
         print(get_node_feature(atom))
         print(len(get_node_feature(atom)))
         break
+
+    sssr = Chem.GetSymmSSSR(mol)
+    print(sssr_to_ring_feature(sssr, 11))

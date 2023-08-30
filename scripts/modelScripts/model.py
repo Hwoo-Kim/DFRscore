@@ -1,4 +1,5 @@
 from typing import List, Tuple
+
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
@@ -50,7 +51,7 @@ class DFRscore(nn.Module):
         super().__init__()
         self._init_default_setting()
         for key in kwargs:
-            if not key in self.__dict__:
+            if key not in self.__dict__:
                 raise KeyError(f"{key} is an unknown key.")
         self.__dict__.update(kwargs)
         torch.set_num_threads(int(self.num_cores))
@@ -112,7 +113,7 @@ class DFRscore(nn.Module):
 
         self.__dict__.update(args)
 
-    def set_processors(self, num_cores:int):
+    def set_processors(self, num_cores: int):
         self.num_cores = num_cores
         torch.set_num_threads(int(self.num_cores))
         return
@@ -196,7 +197,7 @@ class DFRscore(nn.Module):
         else:
             return None, None, None
 
-    #def mols_to_graph_feature(self, mol_list):
+    # def mols_to_graph_feature(self, mol_list):
     #    """
     #    Args:
     #      mol_list: list of RDKit molecule objects.
@@ -266,7 +267,7 @@ class DFRscore(nn.Module):
         scores = []
         since = time.time()
         for batch in data_loader:
-            t += (time.time()-since)
+            t += time.time() - since
             x = batch["feature"].float().to(self.device)
             A = batch["adj"].float().to(self.device)
             scores.append(self.forward(x, A).to("cpu").detach())
@@ -276,7 +277,7 @@ class DFRscore(nn.Module):
         scores = torch.where(
             scores.isnan(), torch.tensor(float(self.max_step + 1)), scores
         )
-        #print(f"Preprocessing time:{t}")
+        # print(f"Preprocessing time:{t}")
         return scores.numpy()
 
     def molListToScores(self, mol_list: list, batch_size=256) -> np.array:
@@ -300,7 +301,7 @@ class DFRscore(nn.Module):
         )
         return scores.numpy()
 
-    def _preprocessing_time_check(self, smi_list:list, batch_size=256) -> float:
+    def _preprocessing_time_check(self, smi_list: list, batch_size=256) -> float:
         since = time.time()
         data_set = InferenceDataset(smi_list=smi_list)
         data_loader = DataLoader(
@@ -313,7 +314,7 @@ class DFRscore(nn.Module):
         for batch in data_loader:
             continue
         end = time.time()
-        return end-since
+        return end - since
 
     def filterWithScore(self, data_list, criteria) -> Tuple[List, List]:
         """
@@ -329,7 +330,7 @@ class DFRscore(nn.Module):
         elif isinstance(data_list[0], Chem.rdchem.Mol):
             scores = self.molListToScores(data_list)
         else:
-            raise TypeError(f"Given data is neither SMILES or rdchem.Mol object.")
+            raise TypeError("Given data is neither SMILES or rdchem.Mol object.")
 
         bPassed = scores < criteria + 0.5
         passed_data, passed_idx = [], []
@@ -386,7 +387,6 @@ class DFRscore(nn.Module):
 
 if __name__ == "__main__":
     from rdkit.Chem import MolFromSmiles as Mol
-    from rdkit.Chem.rdmolops import tGetAdjacencyMatrix
 
     smi1, smi2, smi3 = "CCCO", "C1CCCCC1", "CCCCCOCC"
     print(smi1, smi2, smi3)

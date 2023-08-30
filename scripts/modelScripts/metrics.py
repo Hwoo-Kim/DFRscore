@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import kendalltau, pearsonr, spearmanr
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
 
@@ -137,13 +138,24 @@ def get_AUROC(y_true, y_score):
     return round(roc_auc_score(y_true, y_score), 3)
 
 
+def get_pearsonr(y_true, y_score):  # for linearly related.
+    return round(pearsonr(y_true, y_score)[0], 3)
+
+
+def get_spearmanr(y_true, y_score):
+    return round(spearmanr(y_true, y_score)[0], 3)
+
+
+def get_kendalltau(y_true, y_score):
+    return round(kendalltau(y_true, y_score)[0], 3)
+
+
 if __name__ == "__main__":
-    true_list = np.concatenate([np.zeros(4), np.ones(4)])
-    prob_list = np.array([0.1, 0.2, 0.3, 0.4, 0.7, 0.8, 0.2, 1.0])
-    prob2_list = prob_list[::-1]
+    # first case
+    true_list = np.concatenate([np.zeros(2), np.ones(2), np.ones(2) * 2])
+    prob_list = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 2.0])
     print(true_list)
     print(prob_list)
-    print(get_AUROC(true_list, prob_list))
-    print(true_list)
-    print(prob2_list)
-    print(get_AUROC(true_list, prob2_list))
+    print(get_pearsonr(true_list, prob_list))
+    print(get_spearmanr(true_list, prob_list))
+    print(get_kendalltau(true_list, prob_list))

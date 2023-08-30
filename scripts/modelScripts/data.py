@@ -1,17 +1,14 @@
-import os
 import pickle
 
 import numpy as np
 import torch
-
-import rdkit
 from rdkit import Chem
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
-
 from torch.nn.utils.rnn import pad_sequence as pad
 from torch.utils.data import Dataset
 
 from .preprocessing import get_node_feature, sssr_to_ring_feature
+
 
 class TrainDataset(Dataset):
     def __init__(self, data_dir, key_dir, mode):
@@ -38,7 +35,7 @@ class TrainDataset(Dataset):
 
 
 class InferenceDataset(Dataset):
-    def __init__(self, smi_list:list=None, mol_list:list=None):
+    def __init__(self, smi_list: list = None, mol_list: list = None):
         super().__init__()
         if all([smi_list, mol_list]) or not any([smi_list, mol_list]):
             raise "input for InferenceDataset is wrong."
@@ -69,7 +66,7 @@ class InferenceDataset(Dataset):
         return data
 
     @classmethod
-    def _smi_to_graph_feature(cls, smi:str):
+    def _smi_to_graph_feature(cls, smi: str):
         try:
             mol = Chem.MolFromSmiles(smi)
         except:
@@ -80,7 +77,7 @@ class InferenceDataset(Dataset):
             return None, None, None
 
     @staticmethod
-    def _mol_to_graph_feature(mol:Chem.rdchem.Mol):
+    def _mol_to_graph_feature(mol: Chem.rdchem.Mol):
         if not isinstance(mol, Chem.rdchem.Mol):
             return None, None, None
 
@@ -113,9 +110,8 @@ def gat_collate_fn(batch):
     node_batch = []
     label_batch = []
 
-    
     max_num_atom = np.max(np.array([b["feature"].size(0) for b in batch]))
-    node_dim = batch[0]["feature"].size(-1)
+    # node_dim = batch[0]["feature"].size(-1)
     for b in batch:
         if b["feature"] is None:
             adj_batch.append(torch.nan)
@@ -141,7 +137,7 @@ def gat_collate_fn(batch):
     return sample
 
 
-#def infer_collate_fn(batch):
+# def infer_collate_fn(batch):
 #    # adjacency: [N,N]
 #    # node_feature: [N,node]
 #    sample = dict()

@@ -1,17 +1,11 @@
-from typing import Tuple
-import argparse
 import copy
-import os
 import pickle
-import random
-import sys
 import time
 from datetime import datetime
+from typing import Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from .data import TrainDataset, gat_collate_fn
@@ -73,7 +67,7 @@ def test(model, loss_fn, test_data_loader):
     return test_loss_list
 
 
-def train_DFRscore(args)->Tuple[int, float]:
+def train_DFRscore(args) -> Tuple[int, float]:
     # 0. initial setting
     data_dir = args.data_dir
     save_dir = args.save_dir
@@ -85,8 +79,8 @@ def train_DFRscore(args)->Tuple[int, float]:
     else:
         new_data_dir = data_dir
     now = datetime.now()
-    since_from = now.strftime("%Y. %m. %d (%a) %H:%M:%S")
     since = time.time()
+
     # 1. Set training parameters
     torch.set_num_threads(int(args.num_threads))
 
@@ -197,7 +191,7 @@ def train_DFRscore(args)->Tuple[int, float]:
     time_elapsed = int(time.time() - since)
     log()
     log(
-        f"  ----- Training Finised -----",
+        "  ----- Training Finised -----",
         f"  finished at : {finished_at}",
         "  time passed: [%dh:%dm:%ds]"
         % (time_elapsed // 3600, (time_elapsed % 3600) // 60, time_elapsed % 60),
@@ -207,13 +201,5 @@ def train_DFRscore(args)->Tuple[int, float]:
     )
     with open(f"{save_dir}/loss_history.pkl", "wb") as fw:
         pickle.dump({"train": train_loss_history, "val": val_loss_history}, fw)
-
-    # 4. Test phase
-    # predictor.eval()
-    # test_loss_list = test(predictor,loss_fn,test_data_loader)
-    # test_loss= np.mean(test_loss_list)
-    ## Logging
-    # log()
-    # log(f'  ----- Test result -----',f'  test loss: {test_loss}')
 
     return best_epoch, best_loss.item()

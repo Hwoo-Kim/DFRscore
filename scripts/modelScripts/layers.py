@@ -1,8 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from rdkit import Chem
-from rdkit.Chem import rdmolops
 
 
 class FeedForward(nn.Module):
@@ -93,27 +90,3 @@ class GraphAttentionLayer(nn.Module):
             + f"  W: Linear({self.emb_dim} -> {self.emb_dim}, bias={self.bias})\n"
             + f"  a: Linear({self.emb_dim} -> {2*self.num_heads}, bias={self.bias})\n)"
         )
-
-
-# if __name__=='__main__':
-#    class Test(nn.Module):
-#        def __init__(self):
-#            super().__init__()
-#            self.A = FeedForward(5, 1, [12,12], 0.2)
-#
-#        def forward(self, x):
-#            return self.A(x)
-#
-#    x = torch.ones((2,5))
-#    model = Test()
-#    model.train()
-#    print(model(x))
-#
-#    model.eval()
-#    print(model(x))
-#
-#    model.train()
-#    print(model(x))
-#
-#    model.eval()
-#    print(model(x))
