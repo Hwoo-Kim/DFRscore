@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .data import TrainDataset, gat_collate_fn
+from .data import DFRscoreCollator, TrainDataset
 from .model import DFRscore
 
 MAX_STEP = None
@@ -80,7 +80,6 @@ def train_DFRscore(args) -> Tuple[int, float]:
         new_data_dir = data_dir
     now = datetime.now()
     since = time.time()
-
     # 1. Set training parameters
     torch.set_num_threads(int(args.num_threads))
 
@@ -127,7 +126,7 @@ def train_DFRscore(args) -> Tuple[int, float]:
         ),
         batch_size=args.batch_size,
         shuffle=True,
-        collate_fn=gat_collate_fn,
+        collate_fn=DFRscoreCollator(mode="train"),
         num_workers=int(args.num_threads),
     )
     val_data_loader = DataLoader(
@@ -138,7 +137,7 @@ def train_DFRscore(args) -> Tuple[int, float]:
         ),
         batch_size=args.batch_size,
         shuffle=False,
-        collate_fn=gat_collate_fn,
+        collate_fn=DFRscoreCollator(mode="train"),
         num_workers=int(args.num_threads),
     )
     # test_data_loader = DataLoader(

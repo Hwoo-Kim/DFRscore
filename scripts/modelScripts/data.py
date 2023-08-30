@@ -51,35 +51,33 @@ class InferenceDataset(Dataset):
         return len(self.data_list)
 
     def __getitem__(self, idx):
-        data = dict()
-
         if self.data_type == "SMILES":
-            feature, adj, n_atom = self._smi_to_graph_feature(self.data_list[idx])
+            return self._smi_to_graph_feature(self.data_list[idx])
 
         elif self.data_type == "Mol":
-            feature, adj, n_atom = self._mol_to_graph_feature(self.data_list[idx])
-
-        data["feature"] = feature
-        data["adj"] = adj
-        data["N_atom"] = n_atom
-
-        return data
+            return self._mol_to_graph_feature(self.data_list[idx])
 
     @classmethod
     def _smi_to_graph_feature(cls, smi: str):
+        # initialize return value
+        data = {"feature": None, "adj": None, "N_atom": None}
+
         try:
             mol = Chem.MolFromSmiles(smi)
         except:
-            return None, None, None
+            return data
         if mol:
             return cls._mol_to_graph_feature(mol)
         else:
-            return None, None, None
+            return data
 
     @staticmethod
     def _mol_to_graph_feature(mol: Chem.rdchem.Mol):
+        # initialize return value
+        data = {"feature": None, "adj": None, "N_atom": None}
+
         if not isinstance(mol, Chem.rdchem.Mol):
-            return None, None, None
+            return data
 
         num_atoms = mol.GetNumAtoms()
 
@@ -99,42 +97,58 @@ class InferenceDataset(Dataset):
             [np.stack(node_feature, axis=0), ring_feature], axis=1
         )
         node_feature = torch.from_numpy(node_feature)
-        return node_feature, adj, num_atoms
+
+        data["feature"] = node_feature
+        data["adj"] = adj
+        data["N_atom"] = num_atoms
+
+        return data
 
 
-def gat_collate_fn(batch):
-    # adjacency: [N,N]
-    # node_feature: [N,node]
-    sample = dict()
-    adj_batch = []
-    node_batch = []
-    label_batch = []
+class DFRscoreCollator:
+    def __init__(self, mode: str):
+        assert mode in ["train", "inference"]
+        self.mode = mode
 
-    max_num_atom = np.max(np.array([b["feature"].size(0) for b in batch]))
-    # node_dim = batch[0]["feature"].size(-1)
-    for b in batch:
-        if b["feature"] is None:
-            adj_batch.append(torch.nan)
-            node_batch.append(torch.nan)
+    def __call__(self, batch):
+        # adjacency: [N,N]
+        # node_feature: [N,node]
+        sample = dict()
+        adj_batch = []
+        node_batch = []
+        label_batch = []
+        none_idx = []
 
-        else:
-            num_atoms = b["feature"].size(0)
+        max_num_atom = np.max(
+            np.array(
+                [b["feature"].size(0) if b["feature"] is not None else 0 for b in batch]
+            )
+        )
 
-            adj = torch.zeros((max_num_atom, max_num_atom))
-            adj[:num_atoms, :num_atoms] = b["adj"]
-            adj_batch.append(adj)
+        for data_idx, b in enumerate(batch):
+            if b["feature"] is None:
+                none_idx.append(data_idx)
+                continue
 
-            node_batch.append(b["feature"])
-            if "label" in b:
-                label_batch.append(b["label"])
+            else:
+                num_atoms = b["feature"].size(0)
 
-    sample["adj"] = torch.stack(adj_batch, 0)
-    sample["feature"] = pad(node_batch, batch_first=True, padding_value=0.0)
+                adj = torch.zeros((max_num_atom, max_num_atom))
+                adj[:num_atoms, :num_atoms] = b["adj"]
+                adj_batch.append(adj)
 
-    if len(label_batch) != 0:
-        sample["label"] = torch.tensor(label_batch)
+                node_batch.append(b["feature"])
+                if self.mode == "train":
+                    label_batch.append(b["label"])
 
-    return sample
+        sample["adj"] = torch.stack(adj_batch, 0)
+        sample["feature"] = pad(node_batch, batch_first=True, padding_value=0.0)
+        sample["none_idx"] = none_idx
+
+        if self.mode == "train":
+            sample["label"] = torch.tensor(label_batch)
+
+        return sample
 
 
 # def infer_collate_fn(batch):

@@ -15,7 +15,7 @@ import rdkit
 from rdkit import Chem
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 
-from .data import InferenceDataset, gat_collate_fn
+from .data import DFRscoreCollator, InferenceDataset
 from .layers import FeedForward, GraphAttentionLayer
 from .preprocessing import get_node_feature, sssr_to_ring_feature
 
@@ -224,7 +224,7 @@ class DFRscore(nn.Module):
 
     #    return node_feats, adjs, N_atoms
 
-    def smiToScore(self, smi: str) -> float:
+    def smiToScore(self, smi: str, return_max_score_to_nan: bool = False) -> float:
         assert isinstance(
             smi, str
         ), "input of smiToScore method must be a string of SMILES."
@@ -240,7 +240,7 @@ class DFRscore(nn.Module):
             )
         return self.molToScore(mol)
 
-    def molToScore(self, mol: object) -> float:
+    def molToScore(self, mol: object, return_max_score_to_nan: bool = False) -> float:
         assert isinstance(
             mol, rdkit.Chem.rdchem.Mol
         ), "input of molToScore method must be an instance of rdkit.Chem.rdchem.Mol."
@@ -249,56 +249,73 @@ class DFRscore(nn.Module):
         adj = adj.float().unsqueeze(0).to(self.device)
         score = self.forward(feature, adj).squeeze(-1).to("cpu").detach()
         if score.isnan():
-            return float(self.max_step + 1)
+            if return_max_score_to_nan:
+                return float(self.max_step + 1)
+            else:
+                return None
         else:
             return score.item()
 
-    def smiListToScores(self, smi_list: list, batch_size=256) -> np.array:
+    def smiListToScores(
+        self, smi_list: list, batch_size=256, return_max_score_to_nan: bool = False
+    ) -> np.array:
         data_set = InferenceDataset(smi_list=smi_list)
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
             shuffle=False,
-            collate_fn=gat_collate_fn,
+            collate_fn=DFRscoreCollator(mode="inference"),
             num_workers=self.num_cores,
         )
-        t = 0
 
-        scores = []
-        since = time.time()
+        all_scores = []
         for batch in data_loader:
-            t += time.time() - since
             x = batch["feature"].float().to(self.device)
             A = batch["adj"].float().to(self.device)
-            scores.append(self.forward(x, A).to("cpu").detach())
-            since = time.time()
+            scores = self.forward(x, A).to("cpu").detach().tolist()
 
-        scores = torch.cat(scores).squeeze(-1)
-        scores = torch.where(
-            scores.isnan(), torch.tensor(float(self.max_step + 1)), scores
-        )
-        # print(f"Preprocessing time:{t}")
-        return scores.numpy()
+            # Handling Mol object is not generated (None) cases
+            for idx in batch["none_idx"]:
+                scores.insert(idx, torch.nan)
+            all_scores.extend(scores)
 
-    def molListToScores(self, mol_list: list, batch_size=256) -> np.array:
+        all_scores = torch.tensor(all_scores)
+        if return_max_score_to_nan:
+            all_scores = torch.where(
+                all_scores.isnan(), torch.tensor(float(self.max_step + 1)), all_scores
+            )
+        return all_scores.numpy()
+
+    def molListToScores(
+        self, mol_list: list, batch_size=256, return_max_score_to_nan: bool = False
+    ) -> np.array:
         data_set = InferenceDataset(mol_list=mol_list)
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
             shuffle=False,
-            collate_fn=gat_collate_fn,
+            collate_fn=DFRscoreCollator(mode="inference"),
             num_workers=self.num_cores,
         )
 
-        scores = []
+        all_scores = []
         for batch in data_loader:
             x = batch["feature"].float().to(self.device)
             A = batch["adj"].float().to(self.device)
-            scores.append(self.forward(x, A).to("cpu").detach())
-        scores = torch.cat(scores).squeeze(-1)
-        scores = torch.where(
-            scores.isnan(), torch.tensor(float(self.max_step + 1)), scores
-        )
+
+            scores = self.forward(x, A).to("cpu").detach().tolist()
+
+            # Handling Mol object is not generated (None) cases
+            for idx in batch["none_idx"]:
+                scores.insert(idx, torch.nan)
+            all_scores.extend(scores)
+
+        all_scores = torch.tensor(all_scores)
+        if return_max_score_to_nan:
+            all_scores = torch.where(
+                all_scores.isnan(), torch.tensor(float(self.max_step + 1)), all_scores
+            )
+
         return scores.numpy()
 
     def _preprocessing_time_check(self, smi_list: list, batch_size=256) -> float:
@@ -308,7 +325,7 @@ class DFRscore(nn.Module):
             data_set,
             batch_size=batch_size,
             shuffle=False,
-            collate_fn=gat_collate_fn,
+            collate_fn=DFRscoreCollator(mode="inference"),
             num_workers=self.num_cores,
         )
         for batch in data_loader:
