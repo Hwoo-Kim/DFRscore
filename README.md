@@ -1,4 +1,4 @@
-# Synthesizability for Virtual Screening
+# DFRscore
 Code for the paper: "[DFRscore: Deep Learning-Based Scoring of Synthetic Complexity with Drug-Focused Retrosynthetic Analysis for High-Throughput Virtual Screening](https://doi.org/10.1021/acs.jcim.3c01134)" by Hyeongwoo Kim, Kyunghoon Lee, Chansu Kim, Jaechang Lim, and Woo Youn Kim (currently in acceptance)
 
 # Table of Contents
@@ -43,10 +43,10 @@ After downloading the data by ```./download_retro_data.sh```, you can run retro-
 python retro_analysis.py \
 --template data/template/retro_template.pkl \
 --reactant data/reactant_bag/filtered_ZINC.smi \
---retro_target <PATH TO TARGET FILE> \
+--retro_target <PATH-TO-TARGET-FILE> \
 --depth 4 \
---num_molecules <NUMBER OF MOLECULES TO BE ANALYZED> \
---num_cores <NUMBER OF CPU CORES>
+--num_molecules <NUMBER-OF-MOLECULES-TO-BE-ANALYZED> \
+--num_cores <NUMBER-OF-CPU-CORES>
 ```
 And go to [Training DFRscore](#training-dfrscore).
 
