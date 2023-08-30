@@ -1,5 +1,5 @@
 # Synthesizability for Virtual Screening
-Code for the paper: "[DFRscore: Deep Learning-Based Scoring of Synthetic Complexity with Drug-Focused Retrosynthetic Analysis for High-Throughput Virtual Screening](https://doi.org/10.1021/acs.jcim.3c01134)" by Hyeongwoo Kim, Kyunghoon Lee, Chansu Kim, Jaechang Lim, and Woo Youn Kim
+Code for the paper: "[DFRscore: Deep Learning-Based Scoring of Synthetic Complexity with Drug-Focused Retrosynthetic Analysis for High-Throughput Virtual Screening](https://doi.org/10.1021/acs.jcim.3c01134)" by Hyeongwoo Kim, Kyunghoon Lee, Chansu Kim, Jaechang Lim, and Woo Youn Kim (currently in acceptance)
 
 # Table of Contents
 - [Install Dependencies](#install-dependencies)
