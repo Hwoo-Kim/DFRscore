@@ -4,8 +4,8 @@ Code for the paper: "[DFRscore: Deep Learning-Based Scoring of Synthetic Complex
 # Table of Contents
 - [Install Dependencies](#install-dependencies)
 - [Download Data](#download-data)
-- [Retro-analysis](#retro-analysis)
-- [Training DFRscore](#train-dfrscore)
+- [Retrosynthetic analysis](#retrosynthetic-analysis)
+- [Training DFRscore](#training-dfrscore)
 - [Using DFRscore to Evaluate Synthetic Accessibility](#using-dfrscore-to-evaluate-synthetic-accessibility)
 
 ## Install Dependencies
@@ -29,15 +29,15 @@ This will configure a new conda environment named 'DFRscore'.
 ```bash
 ./download_train_data.sh
 ```
-And go to [Train and Test](#train-and-test).
+And go to [Training DFRscore](#training-dfrscore).
 
 2. Or, if you want to get the training data by running our retrosynthetic anaylsis tool (FRA) followed by model training, you can download the ingredients with:
 ```bash
 ./download_retro_data.sh
 ```
-And go to [Retro-analysis](#retro-analysis).
+And go to [Retrosynthetic Analysis](#retrosynthetic-analysis).
 
-## Retro-analysis
+## Retrosynthetic Analysis
 After downloading the data by ```./download_retro_data.sh```, you can run retro-analysis tool by:
 ```bash
 python retro_analysis.py \
