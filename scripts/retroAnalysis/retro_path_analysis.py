@@ -3,20 +3,16 @@ import os
 import pickle
 import queue  # imported for using queue.Empty exception
 import shutil
-import sys
 import time
-from bisect import bisect_left
 from copy import copy, deepcopy
 from datetime import datetime
 from multiprocessing import Process, Queue
 
 import timeout_decorator
 from rdkit import Chem, RDLogger
-from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
-from rdkit.Chem.FragmentMatcher import FragmentMatcher
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -35,15 +31,7 @@ class SynthesisTree:
         self.lastRxnLoc = None
 
     def getCopiedTree(self):
-        # new_tree = SynthesisTree(self.target)
-        # new_tree.tree = [copy(pair) for pair in self.tree]
-        # new_tree.notFinished = copy(self.notFinished)
-        # new_tree.lastRxnIdx = copy(self.lastRxnIdx)
-        # new_tree.lastPrecursors = copy(self.lastPrecursors)
-        # new_tree.lastRxnLoc = copy(self.lastRxnLoc)
-        # return new_tree
         return deepcopy(self)
-        # return copy.copy(self)
 
     def getNumNotFin(self):
         return len(self.notFinished)
@@ -166,7 +154,7 @@ def cure_rxn_result(pair):
         if int(Chem.SanitizeMol(mol, catchErrors=True)) != 0:
             return None
         for idx, atom in enumerate(atoms):
-            if not idx in explicitH_counts:
+            if idx not in explicitH_counts:
                 continue
             atom.SetNumExplicitHs(explicitH_counts[idx])
             if atom.GetHybridization() != Chem.rdchem.HybridizationType(0):
@@ -197,7 +185,7 @@ def duplicate_remove(list_of_list):
         return []
     result = []
     for s in list_of_list:
-        if not s in result:
+        if s not in result:
             result.append(s)
     return result
 
@@ -205,7 +193,7 @@ def duplicate_remove(list_of_list):
 def onestep_by_reactions(target_in_mol, rxn_objs):
     result = []
     for rxn_idx, rxn in enumerate(rxn_objs):
-        if rxn == None:
+        if rxn is None:
             continue
         try:
             rxn_results = rxn.RunReactants([target_in_mol])
@@ -233,7 +221,7 @@ def onestep_by_reactions(target_in_mol, rxn_objs):
 
 def first_reaction(synthesis_tree, rxn_objs):
     target_in_mol = Mol(synthesis_tree.getTarget())
-    if target_in_mol == None:
+    if target_in_mol is None:
         return False
     reaction_result = onestep_by_reactions(target_in_mol, rxn_objs)
     if reaction_result == []:
@@ -252,7 +240,7 @@ def further_reaction(syn_trees, rxn_objs):
             if prec_idx < last_rxn_loc:
                 continue
             mol_prec = Mol(prec)
-            if mol_prec == None:
+            if mol_prec is None:
                 continue
             reaction_result = onestep_by_reactions(mol_prec, rxn_objs)
             if reaction_result == []:
@@ -292,7 +280,7 @@ def R_bag_check(synthesis_trees: list, reactant_bag: set, diff: int):
         elif result == False:
             to_del.append(tree)
             continue
-        elif result == None:
+        elif result is None:
             continue
 
     if diff == 0:
@@ -336,7 +324,7 @@ def batch_retro_analysis(
         target_in_smiles: str, reactant_bag: set, depth: int, rxn_objects: list
     ):
         synthesis_tree = SynthesisTree(target_in_smiles)
-        positives_dict = dict()
+        # positives_dict = dict()
 
         # 0. In R_bag check
         in_R_bag = initial_R_bag_check(target_in_smiles, reactant_bag)
@@ -360,7 +348,7 @@ def batch_retro_analysis(
                 return result[0], result[1], in_R_bag
         return result[0], result[1], in_R_bag
 
-    ## Main operation
+    # Main operation
     rxn_objects = []
     for rxn in rxn_templates:
         try:
@@ -385,7 +373,7 @@ def batch_retro_analysis(
             test_result, tree, _in_R_bag = retro_analysis(
                 smi, reactant_bag, depth, rxn_objects
             )
-        except TimeoutError as e:
+        except TimeoutError:
             Failed.append(smi)
             continue
         if _in_R_bag == True:
@@ -449,6 +437,7 @@ RXN_NAMES = None
 
 def retrosyntheticAnalyzer(args):
     """
+    Implementation of FRA (Full-RetroSynthetic-Analysis)
     Main function. This conducts multiprocessing of 'retrosynthetic_analysis_single_batch'.
     """
     # 1. reading data from the input config.
@@ -478,7 +467,7 @@ def retrosyntheticAnalyzer(args):
     rxn_short_names = []
     rxn_templates = []
     for short_name, temp in templates.items():
-        if temp == None:
+        if temp is None:
             rxn_short_names.append(None)
             rxn_templates.append(None)
             continue
@@ -524,8 +513,12 @@ def retrosyntheticAnalyzer(args):
     log("  ----- Multiprocessing -----")
     with open(reactant_set_path, "rb") as fr:
         reactant_bag = pickle.load(fr)
+
     # data_format = reactant_data['format']
     reactant_bag = reactant_bag["data"]
+    reactant_bag.remove(
+        Smiles(Mol("OC(=O)-c1ccc(cc1)-c1ccc(OCCO)c(c1)-c1cc(C(C)(C)C)c(cc1)-N2CCCC2"))
+    )  # FIXME: delete this line
     num_of_tasks = args.num_molecules // batch_size
     if args.num_molecules % batch_size != 0:
         num_of_tasks += 1
@@ -567,7 +560,7 @@ def retrosyntheticAnalyzer(args):
     log(" ---------------------")
     log("  Retro analysis step finished.", "  Joining the results...")
 
-    file0 = f"in_reactant_bag.smi"
+    file0 = "in_reactant_bag.smi"
     files1 = [f"pos{current_depth+1}.smi" for current_depth in range(args.depth)]
     files2 = [
         f"pos{current_depth+1}_with_tree.json" for current_depth in range(args.depth)

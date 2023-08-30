@@ -1,6 +1,5 @@
 import os
 import pickle
-import time
 from datetime import datetime
 from multiprocessing import Manager, Process
 
@@ -40,8 +39,9 @@ def R_set_generator(args, use_inchikey=False, canonicalize=False):
     since_inform = now.strftime("%Y. %m. %d (%a) %H:%M:%S")
     log(f"  Started at: {since_inform}")
     # check the file already exists or not.
-    since = time.time()
-    reactant_bag_path = os.path.join(args.root, "data/reactant_bag/R_set_mcule_221205.pkl")  # set
+    reactant_bag_path = os.path.join(
+        args.root, "data/reactant_bag/R_set_mcule_221205.pkl"
+    )  # set
     if os.path.isfile(reactant_bag_path):
         log("  The file already exists.")
         log("  Reactant set generation finished.")
@@ -53,7 +53,6 @@ def R_set_generator(args, use_inchikey=False, canonicalize=False):
 
     # generate reactant set.
     to_save = {"format": "smiles"}
-    since = time.time()
     if use_inchikey == True:
         to_save["format"] = "inchikey"
         log(f"  Size of reactant bag is: {len(reactants)}")

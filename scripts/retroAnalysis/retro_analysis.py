@@ -1,20 +1,15 @@
-import json
 import os
 import pickle
 import queue  # imported for using queue.Empty exception
 import shutil
-import sys
 import time
-from copy import deepcopy
 from datetime import datetime
 from multiprocessing import Process, Queue
 
 import timeout_decorator
 from rdkit import Chem, RDLogger
-from rdkit.Chem import AllChem
 from rdkit.Chem import MolFromSmiles as Mol
 from rdkit.Chem import MolToSmiles as Smiles
-from rdkit.Chem import inchi
 from rdkit.Chem.AllChem import ReactionFromSmarts as Rxn
 
 RDLogger.DisableLog("rdApp.*")
@@ -41,7 +36,7 @@ def cure_rxn_result(pair):
         if int(Chem.SanitizeMol(mol, catchErrors=True)) != 0:
             return None
         for idx, atom in enumerate(atoms):
-            if not idx in explicitH_counts:
+            if idx not in explicitH_counts:
                 continue
             atom.SetNumExplicitHs(explicitH_counts[idx])
             if atom.GetHybridization() != Chem.rdchem.HybridizationType(0):
@@ -72,7 +67,7 @@ def duplicate_remove(list_of_list):
         return []
     result = []
     for s in list_of_list:
-        if not s in result:
+        if s not in result:
             result.append(s)
     return result
 
@@ -80,7 +75,7 @@ def duplicate_remove(list_of_list):
 def onestep_by_reactions(target_in_mol, rxn_objs):
     result = []
     for rxn_idx, rxn in enumerate(rxn_objs):
-        if rxn == None:
+        if rxn is None:
             continue
         try:
             rxn_results = rxn.RunReactants([target_in_mol])
@@ -107,23 +102,21 @@ def onestep_by_reactions(target_in_mol, rxn_objs):
 
 
 def first_reaction(target_in_mol, rxn_objs):
-    if target_in_mol == None:
+    if target_in_mol is None:
         return []
     rxn_result = onestep_by_reactions(target_in_mol, rxn_objs)
     return rxn_result
 
 
 def further_reaction(retro_result, rxn_objs):
-    to_del = []
     new_retro_results = []
-    tmp_del = []
     for pair in retro_result:
         for idx, intermediate in enumerate(pair):
             try:
                 intermediate_in_mol = Mol(intermediate)
             except:
                 continue
-            if intermediate_in_mol == None:
+            if intermediate_in_mol is None:
                 continue
             results = onestep_by_reactions(intermediate_in_mol, rxn_objs)
             if results == []:
@@ -165,7 +158,7 @@ def R_bag_check(
         to_del = []
         for pair_idx, pair in enumerate(reaction_result):
             exit = False
-            temp_idx, to_be_checked, others = pair[0], pair[1], pair[2:]
+            _, to_be_checked, others = pair[0], pair[1], pair[2:]
             limit_numb = diff - len(others)
             precursor_R_bag_check = []
 
@@ -195,7 +188,7 @@ def R_bag_check(
 
     elif diff == 0:
         for pair_idx, pair in enumerate(reaction_result):
-            temp_idx, to_be_checked, others = pair[0], pair[1], pair[2:]
+            _, to_be_checked, others = pair[0], pair[1], pair[2:]
             if len(others) != 0:
                 continue
             precursor_R_bag_check = []
@@ -251,7 +244,7 @@ def retro_analysis_single_batch(
         label, filtered_reaction_result = R_bag_check(
             reaction_result, reactant_bag, 1, depth
         )
-        if not label is None:
+        if label is not None:
             return label
 
         # 2. depth more than 1 operation
@@ -262,7 +255,7 @@ def retro_analysis_single_batch(
             label, filtered_reaction_result = R_bag_check(
                 reaction_result, reactant_bag, current_depth, depth
             )
-            if not label is None:
+            if label is not None:
                 return label
         return "Neg"
 
@@ -292,7 +285,7 @@ def retro_analysis_single_batch(
     for target in targets_in_smiles:
         try:
             label = retro_analysis(target, reactant_bag, depth, rxn_objects)
-        except TimeoutError as e:
+        except TimeoutError:
             batch_result_dict["TimeOut"].append(target)
             continue
         else:
@@ -338,6 +331,7 @@ def do_retro_analysis(tasks, reactant_bag, exclude_in_R_bag, num_tasks, max_time
 
 def retrosyntheticAnalyzer(args):
     """
+    Implementation of FRA (Full-RetroSynthetic-Analysis)
     Main function. This conducts multiprocessing of 'retrosynthetic_analysis_single_batch'.
     """
     # 1. reading data from the input config.
@@ -365,7 +359,7 @@ def retrosyntheticAnalyzer(args):
 
     rxn_templates = []
     for short_name, temp in templates.items():
-        if temp == None:
+        if temp is None:
             rxn_templates.append(None)
             continue
         rxn_templates.append(temp["retro_smarts"])
@@ -452,7 +446,7 @@ def retrosyntheticAnalyzer(args):
     log(" ---------------------")
     log("  Retro analysis step finished.", "  Joining the results...")
 
-    file0 = f"in_reactant_bag.smi"
+    file0 = "in_reactant_bag.smi"
     files1 = [f"pos{current_depth+1}.smi" for current_depth in range(args.depth)]
     file2 = f"neg{args.depth}.smi"
     file3 = "timed_out.smi"
