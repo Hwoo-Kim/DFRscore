@@ -1,6 +1,5 @@
 import argparse
 import os
-import pickle
 import sys
 from os.path import dirname
 
