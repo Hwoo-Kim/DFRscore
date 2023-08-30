@@ -4,10 +4,15 @@ from datetime import datetime
 
 from scripts.modelScripts.preprocessing import train_data_preprocess
 from scripts.modelScripts.train import train_DFRscore
-from scripts.utils import get_cuda_visible_devices, logger, train_save_dir_setting, set_random_seed
+from scripts.utils import (
+    get_cuda_visible_devices,
+    logger,
+    set_random_seed,
+    train_save_dir_setting,
+)
 
 
-def main_train(args):
+def main_train(args: argparse.Namespace):
     # 0. Reading config and directory setting
     args.root = os.path.dirname(os.path.realpath(__file__))
     args.data_dir, args.save_dir = train_save_dir_setting(args)
@@ -59,7 +64,9 @@ def main_train(args):
     if args.database_id != "":
         args.logger.notion_logging(
             new_data={
-                "Model Name": {"title": [{"text": {"content": args.save_dir.split("/")[-1]}}]},
+                "Model Name": {
+                    "title": [{"text": {"content": args.save_dir.split("/")[-1]}}]
+                },
                 "n_conv_layer": {"number": args.n_conv_layer},
                 "n_fc_layer": {"number": args.n_fc_layer},
                 "conv_dim": {"number": args.conv_dim},
@@ -68,7 +75,6 @@ def main_train(args):
                 "best_loss": {"number": best_loss},
             }
         )
-
 
 
 # main operation:

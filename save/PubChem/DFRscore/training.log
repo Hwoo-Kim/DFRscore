@@ -1,0 +1,841 @@
+Model training save directory is:
+  save/PubChem/DFRscore
+
+2. Model Training Phase
+  ----- Train Config Information -----
+  save_dir: save/PubChem/DFRscore
+  data dir: save/PubChem/retro_result/basic_process
+  num_data: 250000
+  num_cores: 4
+  max_step: 4
+  batch_size: 128
+  num_threads: 4
+  feature_size: 49
+  n_conv_layer: 6
+  n_fc_layer: 2
+  num_heads: 8
+  conv_dim: 256
+  fc_dim: 128
+  dropout: 0.2
+  num_epoch: 200
+  lr: 0.0004
+  use_scratch: False
+  factor: 0.5
+  patience: 10
+  threshold: 0.001
+  min_lr: 1e-07
+
+  ----- Training Log -----
+  1th epoch,
+   training loss: 1.603123664855957
+   val loss: 1.2608646154403687
+   epoch time: 28.80
+  2th epoch,
+   training loss: 1.2489891052246094
+   val loss: 1.1286829710006714
+   epoch time: 25.47
+  3th epoch,
+   training loss: 1.1410261392593384
+   val loss: 1.0196713209152222
+   epoch time: 24.64
+  4th epoch,
+   training loss: 1.0752601623535156
+   val loss: 1.0103336572647095
+   epoch time: 33.51
+  5th epoch,
+   training loss: 1.0245552062988281
+   val loss: 0.9399313926696777
+   epoch time: 29.65
+  6th epoch,
+   training loss: 0.9858373999595642
+   val loss: 0.9564914703369141
+   epoch time: 33.47
+  7th epoch,
+   training loss: 0.95562344789505
+   val loss: 0.9511966705322266
+   epoch time: 31.80
+  8th epoch,
+   training loss: 0.9290602803230286
+   val loss: 0.9156375527381897
+   epoch time: 29.54
+  9th epoch,
+   training loss: 0.9096823334693909
+   val loss: 0.859889030456543
+   epoch time: 24.34
+  10th epoch,
+   training loss: 0.8909768462181091
+   val loss: 0.8412843942642212
+   epoch time: 24.37
+  11th epoch,
+   training loss: 0.8711280226707458
+   val loss: 0.8427072763442993
+   epoch time: 24.93
+  12th epoch,
+   training loss: 0.8578532338142395
+   val loss: 0.8351780772209167
+   epoch time: 24.61
+  13th epoch,
+   training loss: 0.8437437415122986
+   val loss: 0.8169384598731995
+   epoch time: 23.81
+  14th epoch,
+   training loss: 0.8367177844047546
+   val loss: 0.7964939475059509
+   epoch time: 26.75
+  15th epoch,
+   training loss: 0.8197336792945862
+   val loss: 0.8340584635734558
+   epoch time: 24.25
+  16th epoch,
+   training loss: 0.8076959848403931
+   val loss: 0.7838628888130188
+   epoch time: 24.09
+  17th epoch,
+   training loss: 0.8015275597572327
+   val loss: 0.7765997648239136
+   epoch time: 24.58
+  18th epoch,
+   training loss: 0.7911885976791382
+   val loss: 0.7642108798027039
+   epoch time: 25.81
+  19th epoch,
+   training loss: 0.7816000580787659
+   val loss: 0.7556071281433105
+   epoch time: 23.99
+  20th epoch,
+   training loss: 0.7725721001625061
+   val loss: 0.7546873688697815
+   epoch time: 26.51
+  21th epoch,
+   training loss: 0.7626664042472839
+   val loss: 0.7449373602867126
+   epoch time: 24.37
+  22th epoch,
+   training loss: 0.7530097961425781
+   val loss: 0.7626334428787231
+   epoch time: 24.83
+  23th epoch,
+   training loss: 0.7527361512184143
+   val loss: 0.7268308997154236
+   epoch time: 24.88
+  24th epoch,
+   training loss: 0.7409894466400146
+   val loss: 0.7530918717384338
+   epoch time: 24.91
+  25th epoch,
+   training loss: 0.7398337721824646
+   val loss: 0.7281723618507385
+   epoch time: 23.69
+  26th epoch,
+   training loss: 0.7305493354797363
+   val loss: 0.7245572209358215
+   epoch time: 25.94
+  27th epoch,
+   training loss: 0.7267137169837952
+   val loss: 0.7283142805099487
+   epoch time: 26.07
+  28th epoch,
+   training loss: 0.7167437076568604
+   val loss: 0.7417686581611633
+   epoch time: 23.47
+  29th epoch,
+   training loss: 0.715970516204834
+   val loss: 0.7061325907707214
+   epoch time: 25.43
+  30th epoch,
+   training loss: 0.7047418355941772
+   val loss: 0.7217509746551514
+   epoch time: 23.57
+  31th epoch,
+   training loss: 0.7050540447235107
+   val loss: 0.711604654788971
+   epoch time: 25.78
+  32th epoch,
+   training loss: 0.6982789039611816
+   val loss: 0.6957147121429443
+   epoch time: 24.19
+  33th epoch,
+   training loss: 0.695248544216156
+   val loss: 0.7126886248588562
+   epoch time: 25.32
+  34th epoch,
+   training loss: 0.686137318611145
+   val loss: 0.7174089550971985
+   epoch time: 22.80
+  35th epoch,
+   training loss: 0.684610903263092
+   val loss: 0.6972771883010864
+   epoch time: 25.09
+  36th epoch,
+   training loss: 0.6840640902519226
+   val loss: 0.7196146249771118
+   epoch time: 23.44
+  37th epoch,
+   training loss: 0.6775444149971008
+   val loss: 0.7100797891616821
+   epoch time: 24.59
+  38th epoch,
+   training loss: 0.6720094084739685
+   val loss: 0.6940463781356812
+   epoch time: 24.27
+  39th epoch,
+   training loss: 0.6725213527679443
+   val loss: 0.6964980959892273
+   epoch time: 25.22
+  40th epoch,
+   training loss: 0.6679211854934692
+   val loss: 0.6963624358177185
+   epoch time: 23.66
+  41th epoch,
+   training loss: 0.6619659662246704
+   val loss: 0.678943395614624
+   epoch time: 25.33
+  42th epoch,
+   training loss: 0.6579448580741882
+   val loss: 0.7218153476715088
+   epoch time: 23.17
+  43th epoch,
+   training loss: 0.6536396145820618
+   val loss: 0.6775596737861633
+   epoch time: 23.56
+  44th epoch,
+   training loss: 0.6543281078338623
+   val loss: 0.68047034740448
+   epoch time: 24.31
+  45th epoch,
+   training loss: 0.6492406725883484
+   val loss: 0.6918756365776062
+   epoch time: 25.24
+  46th epoch,
+   training loss: 0.6447434425354004
+   val loss: 0.6897488832473755
+   epoch time: 23.75
+  47th epoch,
+   training loss: 0.6422627568244934
+   val loss: 0.6790962219238281
+   epoch time: 26.60
+  48th epoch,
+   training loss: 0.6420000791549683
+   val loss: 0.6767210364341736
+   epoch time: 23.64
+  49th epoch,
+   training loss: 0.6360359191894531
+   val loss: 0.6734816431999207
+   epoch time: 25.70
+  50th epoch,
+   training loss: 0.6354706287384033
+   val loss: 0.7229142189025879
+   epoch time: 24.80
+  51th epoch,
+   training loss: 0.6288853883743286
+   val loss: 0.6677747964859009
+   epoch time: 24.51
+  52th epoch,
+   training loss: 0.6285161972045898
+   val loss: 0.6725080013275146
+   epoch time: 24.16
+  53th epoch,
+   training loss: 0.6234245896339417
+   val loss: 0.6999101042747498
+   epoch time: 24.96
+  54th epoch,
+   training loss: 0.6223179697990417
+   val loss: 0.6602811813354492
+   epoch time: 26.06
+  55th epoch,
+   training loss: 0.6170268654823303
+   val loss: 0.676771879196167
+   epoch time: 23.91
+  56th epoch,
+   training loss: 0.6186918616294861
+   val loss: 0.6908896565437317
+   epoch time: 26.11
+  57th epoch,
+   training loss: 0.6171739101409912
+   val loss: 0.6795697212219238
+   epoch time: 23.95
+  58th epoch,
+   training loss: 0.6129056811332703
+   val loss: 0.6746525764465332
+   epoch time: 25.83
+  59th epoch,
+   training loss: 0.6087691187858582
+   val loss: 0.7078131437301636
+   epoch time: 24.86
+  60th epoch,
+   training loss: 0.6075283885002136
+   val loss: 0.6542106866836548
+   epoch time: 26.11
+  61th epoch,
+   training loss: 0.6031834483146667
+   val loss: 0.6461537480354309
+   epoch time: 24.63
+  62th epoch,
+   training loss: 0.5996197462081909
+   val loss: 0.6504912972450256
+   epoch time: 27.04
+  63th epoch,
+   training loss: 0.599842369556427
+   val loss: 0.6606131792068481
+   epoch time: 24.44
+  64th epoch,
+   training loss: 0.5997312664985657
+   val loss: 0.6750887632369995
+   epoch time: 25.90
+  65th epoch,
+   training loss: 0.5954536199569702
+   val loss: 0.7190361022949219
+   epoch time: 25.41
+  66th epoch,
+   training loss: 0.5948219895362854
+   val loss: 0.6578863263130188
+   epoch time: 25.44
+  67th epoch,
+   training loss: 0.5860585570335388
+   val loss: 0.6512100696563721
+   epoch time: 26.35
+  68th epoch,
+   training loss: 0.593235433101654
+   val loss: 0.6451322436332703
+   epoch time: 25.19
+  69th epoch,
+   training loss: 0.5850749015808105
+   val loss: 0.6475844979286194
+   epoch time: 25.90
+  70th epoch,
+   training loss: 0.5820846557617188
+   val loss: 0.6565697193145752
+   epoch time: 24.29
+  71th epoch,
+   training loss: 0.5832011103630066
+   val loss: 0.6666139364242554
+   epoch time: 25.78
+  72th epoch,
+   training loss: 0.5848919153213501
+   val loss: 0.6517781019210815
+   epoch time: 24.58
+  73th epoch,
+   training loss: 0.5816525220870972
+   val loss: 0.6601830124855042
+   epoch time: 24.81
+  74th epoch,
+   training loss: 0.5782631039619446
+   val loss: 0.6714444160461426
+   epoch time: 26.12
+  75th epoch,
+   training loss: 0.5770958065986633
+   val loss: 0.6351879835128784
+   epoch time: 26.34
+  76th epoch,
+   training loss: 0.5722538828849792
+   val loss: 0.6750892400741577
+   epoch time: 25.12
+  77th epoch,
+   training loss: 0.574487030506134
+   val loss: 0.6508300304412842
+   epoch time: 27.25
+  78th epoch,
+   training loss: 0.5702124834060669
+   val loss: 0.6713062524795532
+   epoch time: 27.70
+  79th epoch,
+   training loss: 0.5719349384307861
+   val loss: 0.6472288370132446
+   epoch time: 25.10
+  80th epoch,
+   training loss: 0.5676143765449524
+   val loss: 0.630517840385437
+   epoch time: 26.93
+  81th epoch,
+   training loss: 0.5637730956077576
+   val loss: 0.6580820679664612
+   epoch time: 24.84
+  82th epoch,
+   training loss: 0.5651397109031677
+   val loss: 0.6428791284561157
+   epoch time: 25.67
+  83th epoch,
+   training loss: 0.5594057440757751
+   val loss: 0.6420850157737732
+   epoch time: 25.81
+  84th epoch,
+   training loss: 0.5645042657852173
+   val loss: 0.6329426765441895
+   epoch time: 26.64
+  85th epoch,
+   training loss: 0.5571833252906799
+   val loss: 0.6546053886413574
+   epoch time: 25.52
+  86th epoch,
+   training loss: 0.556580662727356
+   val loss: 0.6407332420349121
+   epoch time: 26.02
+  87th epoch,
+   training loss: 0.5562032461166382
+   val loss: 0.6329736113548279
+   epoch time: 25.50
+  88th epoch,
+   training loss: 0.5525616407394409
+   val loss: 0.6502678394317627
+   epoch time: 25.22
+  89th epoch,
+   training loss: 0.5544431209564209
+   val loss: 0.6358453631401062
+   epoch time: 26.80
+  90th epoch,
+   training loss: 0.5479869246482849
+   val loss: 0.6270712018013
+   epoch time: 25.54
+  91th epoch,
+   training loss: 0.5490570664405823
+   val loss: 0.6376850008964539
+   epoch time: 25.10
+  92th epoch,
+   training loss: 0.5442742705345154
+   val loss: 0.6416435241699219
+   epoch time: 26.36
+  93th epoch,
+   training loss: 0.54463791847229
+   val loss: 0.6350468993186951
+   epoch time: 26.51
+  94th epoch,
+   training loss: 0.5456475615501404
+   val loss: 0.6879096627235413
+   epoch time: 25.29
+  95th epoch,
+   training loss: 0.5406790375709534
+   val loss: 0.6381921172142029
+   epoch time: 27.96
+  96th epoch,
+   training loss: 0.5413827896118164
+   val loss: 0.6561399698257446
+   epoch time: 27.07
+  97th epoch,
+   training loss: 0.5375401973724365
+   val loss: 0.6403300762176514
+   epoch time: 25.15
+  98th epoch,
+   training loss: 0.5372872352600098
+   val loss: 0.6346242427825928
+   epoch time: 27.73
+  99th epoch,
+   training loss: 0.53631192445755
+   val loss: 0.6256617903709412
+   epoch time: 25.59
+  100th epoch,
+   training loss: 0.5361096262931824
+   val loss: 0.6312522888183594
+   epoch time: 25.33
+  101th epoch,
+   training loss: 0.5354665517807007
+   val loss: 0.643222987651825
+   epoch time: 26.11
+  102th epoch,
+   training loss: 0.5289865136146545
+   val loss: 0.6285233497619629
+   epoch time: 27.14
+  103th epoch,
+   training loss: 0.5338075757026672
+   val loss: 0.6477990746498108
+   epoch time: 24.24
+  104th epoch,
+   training loss: 0.5315261483192444
+   val loss: 0.6189604997634888
+   epoch time: 26.59
+  105th epoch,
+   training loss: 0.5280954837799072
+   val loss: 0.6251203417778015
+   epoch time: 25.84
+  106th epoch,
+   training loss: 0.5282971262931824
+   val loss: 0.6371499300003052
+   epoch time: 25.04
+  107th epoch,
+   training loss: 0.5295256972312927
+   val loss: 0.6430253386497498
+   epoch time: 26.71
+  108th epoch,
+   training loss: 0.5236063599586487
+   val loss: 0.6294927597045898
+   epoch time: 25.03
+  109th epoch,
+   training loss: 0.5275123119354248
+   val loss: 0.6322150826454163
+   epoch time: 26.33
+  110th epoch,
+   training loss: 0.5261834263801575
+   val loss: 0.6592334508895874
+   epoch time: 25.91
+  111th epoch,
+   training loss: 0.5209709405899048
+   val loss: 0.6275179982185364
+   epoch time: 26.34
+  112th epoch,
+   training loss: 0.5181204676628113
+   val loss: 0.659743070602417
+   epoch time: 24.76
+  113th epoch,
+   training loss: 0.5189340114593506
+   val loss: 0.6342515349388123
+   epoch time: 25.94
+  114th epoch,
+   training loss: 0.5184355974197388
+   val loss: 0.6416611671447754
+   epoch time: 25.46
+  115th epoch,
+   training loss: 0.5184600949287415
+   val loss: 0.6501463651657104
+   epoch time: 25.61
+   scheduler has reduced lr, current is: 0.0002
+  116th epoch,
+   training loss: 0.4806014895439148
+   val loss: 0.6102410554885864
+   epoch time: 27.55
+  117th epoch,
+   training loss: 0.4716513752937317
+   val loss: 0.6199938058853149
+   epoch time: 24.96
+  118th epoch,
+   training loss: 0.4670458436012268
+   val loss: 0.6208216547966003
+   epoch time: 25.10
+  119th epoch,
+   training loss: 0.46594008803367615
+   val loss: 0.5982451438903809
+   epoch time: 25.52
+  120th epoch,
+   training loss: 0.46279576420783997
+   val loss: 0.6015708446502686
+   epoch time: 26.40
+  121th epoch,
+   training loss: 0.46104371547698975
+   val loss: 0.5974380373954773
+   epoch time: 24.86
+  122th epoch,
+   training loss: 0.4602973163127899
+   val loss: 0.6482737064361572
+   epoch time: 27.88
+  123th epoch,
+   training loss: 0.45600587129592896
+   val loss: 0.6014804244041443
+   epoch time: 25.06
+  124th epoch,
+   training loss: 0.45680099725723267
+   val loss: 0.6146349310874939
+   epoch time: 26.04
+  125th epoch,
+   training loss: 0.45392924547195435
+   val loss: 0.6120245456695557
+   epoch time: 25.79
+  126th epoch,
+   training loss: 0.4539516866207123
+   val loss: 0.6056053042411804
+   epoch time: 26.34
+  127th epoch,
+   training loss: 0.4518677890300751
+   val loss: 0.610392689704895
+   epoch time: 26.25
+  128th epoch,
+   training loss: 0.45108261704444885
+   val loss: 0.6263365149497986
+   epoch time: 25.86
+  129th epoch,
+   training loss: 0.4485117793083191
+   val loss: 0.6008440852165222
+   epoch time: 26.30
+  130th epoch,
+   training loss: 0.4494374394416809
+   val loss: 0.6120939254760742
+   epoch time: 24.88
+  131th epoch,
+   training loss: 0.44877615571022034
+   val loss: 0.6051203012466431
+   epoch time: 27.70
+  132th epoch,
+   training loss: 0.44535014033317566
+   val loss: 0.6165741086006165
+   epoch time: 25.13
+   scheduler has reduced lr, current is: 0.0001
+  133th epoch,
+   training loss: 0.4317372441291809
+   val loss: 0.6006086468696594
+   epoch time: 26.64
+  134th epoch,
+   training loss: 0.42604297399520874
+   val loss: 0.6106147766113281
+   epoch time: 25.57
+  135th epoch,
+   training loss: 0.42391568422317505
+   val loss: 0.6021574139595032
+   epoch time: 27.13
+  136th epoch,
+   training loss: 0.4238640367984772
+   val loss: 0.5947200655937195
+   epoch time: 27.01
+  137th epoch,
+   training loss: 0.4234895706176758
+   val loss: 0.596886932849884
+   epoch time: 26.11
+  138th epoch,
+   training loss: 0.42174261808395386
+   val loss: 0.5910391211509705
+   epoch time: 27.42
+  139th epoch,
+   training loss: 0.4188961982727051
+   val loss: 0.6205690503120422
+   epoch time: 24.82
+  140th epoch,
+   training loss: 0.42100536823272705
+   val loss: 0.5947864055633545
+   epoch time: 28.08
+  141th epoch,
+   training loss: 0.4166460335254669
+   val loss: 0.5972678661346436
+   epoch time: 25.18
+  142th epoch,
+   training loss: 0.4177359640598297
+   val loss: 0.5878843069076538
+   epoch time: 25.89
+  143th epoch,
+   training loss: 0.41951248049736023
+   val loss: 0.5971673727035522
+   epoch time: 26.50
+  144th epoch,
+   training loss: 0.4152464270591736
+   val loss: 0.5979032516479492
+   epoch time: 25.20
+  145th epoch,
+   training loss: 0.4165663719177246
+   val loss: 0.5955926179885864
+   epoch time: 26.23
+  146th epoch,
+   training loss: 0.41368523240089417
+   val loss: 0.5920066833496094
+   epoch time: 25.88
+  147th epoch,
+   training loss: 0.41389888525009155
+   val loss: 0.589480996131897
+   epoch time: 26.88
+  148th epoch,
+   training loss: 0.4150940477848053
+   val loss: 0.6131182909011841
+   epoch time: 24.57
+  149th epoch,
+   training loss: 0.4160952568054199
+   val loss: 0.6118293404579163
+   epoch time: 25.87
+  150th epoch,
+   training loss: 0.41076526045799255
+   val loss: 0.5980554223060608
+   epoch time: 25.04
+  151th epoch,
+   training loss: 0.411916583776474
+   val loss: 0.6016623377799988
+   epoch time: 26.68
+  152th epoch,
+   training loss: 0.4106246829032898
+   val loss: 0.5981379151344299
+   epoch time: 26.01
+  153th epoch,
+   training loss: 0.4114740192890167
+   val loss: 0.5968255996704102
+   epoch time: 25.87
+   scheduler has reduced lr, current is: 5e-05
+  154th epoch,
+   training loss: 0.4043809771537781
+   val loss: 0.5946829915046692
+   epoch time: 27.67
+  155th epoch,
+   training loss: 0.39904505014419556
+   val loss: 0.5971390604972839
+   epoch time: 25.88
+  156th epoch,
+   training loss: 0.40076377987861633
+   val loss: 0.5890790224075317
+   epoch time: 27.25
+  157th epoch,
+   training loss: 0.39778608083724976
+   val loss: 0.5841381549835205
+   epoch time: 24.68
+  158th epoch,
+   training loss: 0.3989655375480652
+   val loss: 0.604389488697052
+   epoch time: 27.30
+  159th epoch,
+   training loss: 0.3952277600765228
+   val loss: 0.5974409580230713
+   epoch time: 25.12
+  160th epoch,
+   training loss: 0.3962211012840271
+   val loss: 0.596235990524292
+   epoch time: 26.44
+  161th epoch,
+   training loss: 0.39525285363197327
+   val loss: 0.5940709114074707
+   epoch time: 25.29
+  162th epoch,
+   training loss: 0.3952008783817291
+   val loss: 0.5936968326568604
+   epoch time: 25.44
+  163th epoch,
+   training loss: 0.39732661843299866
+   val loss: 0.5835705399513245
+   epoch time: 25.91
+  164th epoch,
+   training loss: 0.3926059305667877
+   val loss: 0.5993848443031311
+   epoch time: 26.22
+  165th epoch,
+   training loss: 0.3937914967536926
+   val loss: 0.5970041751861572
+   epoch time: 25.80
+  166th epoch,
+   training loss: 0.3908344507217407
+   val loss: 0.6052339673042297
+   epoch time: 24.74
+  167th epoch,
+   training loss: 0.3952380418777466
+   val loss: 0.5891875624656677
+   epoch time: 27.58
+  168th epoch,
+   training loss: 0.39332321286201477
+   val loss: 0.5986304879188538
+   epoch time: 25.23
+   scheduler has reduced lr, current is: 2.5e-05
+  169th epoch,
+   training loss: 0.39136624336242676
+   val loss: 0.5937449336051941
+   epoch time: 27.09
+  170th epoch,
+   training loss: 0.3872653841972351
+   val loss: 0.5933384895324707
+   epoch time: 26.05
+  171th epoch,
+   training loss: 0.38984227180480957
+   val loss: 0.5900740623474121
+   epoch time: 25.88
+  172th epoch,
+   training loss: 0.3893483877182007
+   val loss: 0.5891889333724976
+   epoch time: 25.35
+  173th epoch,
+   training loss: 0.3884539306163788
+   val loss: 0.5920705795288086
+   epoch time: 25.72
+  174th epoch,
+   training loss: 0.39042767882347107
+   val loss: 0.5895094871520996
+   epoch time: 26.88
+  175th epoch,
+   training loss: 0.38465768098831177
+   val loss: 0.5964504480361938
+   epoch time: 24.85
+  176th epoch,
+   training loss: 0.3887289762496948
+   val loss: 0.589918851852417
+   epoch time: 26.82
+  177th epoch,
+   training loss: 0.38674211502075195
+   val loss: 0.5878573060035706
+   epoch time: 25.29
+  178th epoch,
+   training loss: 0.3879970908164978
+   val loss: 0.5870177745819092
+   epoch time: 26.01
+  179th epoch,
+   training loss: 0.3882846236228943
+   val loss: 0.5895041227340698
+   epoch time: 25.85
+   scheduler has reduced lr, current is: 1.25e-05
+  180th epoch,
+   training loss: 0.38713252544403076
+   val loss: 0.5941084623336792
+   epoch time: 27.92
+  181th epoch,
+   training loss: 0.3836526572704315
+   val loss: 0.5887987613677979
+   epoch time: 25.38
+  182th epoch,
+   training loss: 0.38330844044685364
+   val loss: 0.5939227342605591
+   epoch time: 26.11
+  183th epoch,
+   training loss: 0.38573235273361206
+   val loss: 0.5908684134483337
+   epoch time: 26.85
+  184th epoch,
+   training loss: 0.38094228506088257
+   val loss: 0.5859806537628174
+   epoch time: 25.46
+  185th epoch,
+   training loss: 0.38452428579330444
+   val loss: 0.5902460217475891
+   epoch time: 27.36
+  186th epoch,
+   training loss: 0.3832254111766815
+   val loss: 0.5900672674179077
+   epoch time: 26.00
+  187th epoch,
+   training loss: 0.3842983543872833
+   val loss: 0.5908433198928833
+   epoch time: 25.40
+  188th epoch,
+   training loss: 0.38218802213668823
+   val loss: 0.5927808284759521
+   epoch time: 25.51
+  189th epoch,
+   training loss: 0.3814065456390381
+   val loss: 0.5882590413093567
+   epoch time: 26.16
+  190th epoch,
+   training loss: 0.38434672355651855
+   val loss: 0.592759907245636
+   epoch time: 26.67
+   scheduler has reduced lr, current is: 6.25e-06
+  191th epoch,
+   training loss: 0.37949714064598083
+   val loss: 0.5869796872138977
+   epoch time: 26.16
+  192th epoch,
+   training loss: 0.38085246086120605
+   val loss: 0.5906804800033569
+   epoch time: 27.07
+  193th epoch,
+   training loss: 0.38215479254722595
+   val loss: 0.591252326965332
+   epoch time: 24.96
+  194th epoch,
+   training loss: 0.37955066561698914
+   val loss: 0.5901833176612854
+   epoch time: 26.68
+  195th epoch,
+   training loss: 0.3826332986354828
+   val loss: 0.5900235176086426
+   epoch time: 25.33
+  196th epoch,
+   training loss: 0.3829965889453888
+   val loss: 0.5893241763114929
+   epoch time: 26.26
+  197th epoch,
+   training loss: 0.3816690444946289
+   val loss: 0.5894336700439453
+   epoch time: 25.96
+  198th epoch,
+   training loss: 0.3812980651855469
+   val loss: 0.5896286964416504
+   epoch time: 29.66
+  199th epoch,
+   training loss: 0.38071027398109436
+   val loss: 0.5898345708847046
+   epoch time: 23.90
+  200th epoch,
+   training loss: 0.37944474816322327
+   val loss: 0.5893771052360535
+   epoch time: 30.49
+
+  ----- Training Finised -----
+  finished at : 2022. 07. 20 (Wed) 21:31:13
+  time passed: [1h:26m:14s]
+  Best epoch: 163
+  Best loss: 0.5835705399513245
+  Decayed_lr: 6.25e-06

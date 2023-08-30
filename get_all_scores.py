@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Union
 
 from rdkit import Chem
 from rdkit.Chem import RDConfig
@@ -12,15 +13,19 @@ from scripts.getScores import getSCScore
 from scripts.modelScripts.model import DFRscore
 
 
-def get_SAScore(mol: Chem.rdchem.Mol):
+def get_SAScore(mol: Union[str, Chem.rdchem.Mol]):
+    if isinstance(mol, str):
+        mol = Chem.MolFromSmiles(mol)
     return sascorer.calculateScore(mol)
 
 
 def get_SCScore(smi: str):
-    return getSCScore([smi])
+    return getSCScore([smi])[0]
 
 
-def get_DFRScore(mol: Chem.rdchem.Mol):
+def get_DFRScore(mol: Union[str, Chem.rdchem.Mol], dfr_scorer):
+    if isinstance(mol, str):
+        mol = Chem.MolFromSmiles(mol)
     return dfr_scorer.molToScore(mol)
 
 
@@ -37,7 +42,7 @@ def printScores(smi: str):
 
 if __name__ == "__main__":
     dfr_scorer = DFRscore.from_trained_model(
-        "/home/hwkim/DFRscore/save/PubChem/DFRscore/Best_model_163.pt"
+        "./save/PubChem/DFRscore/Best_model_163.pt"
     )
 
     smi = "C1CNCCC1C(=O)O"
