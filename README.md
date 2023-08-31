@@ -25,6 +25,7 @@ Or simply you can install the required packages by running
 This will configure a new conda environment named 'DFRscore'.
 
 ## Download Data
+### Currently not working because the data links are not yet prepared... They would be available with Zenodo as soon as possible.
 1. If you ONLY want to train the DFRscore model without retrosynthetic analysis, you can download the data for training with:   
 ```bash
 ./download_train_data.sh
