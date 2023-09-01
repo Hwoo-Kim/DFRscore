@@ -20,7 +20,7 @@ you can manually install the required pakages as follows:
 
 Or simply you can install the required packages by running
 ```bash
-./dependencies
+. ./dependencies
 ```
 This will configure a new conda environment named 'DFRscore'.
 
