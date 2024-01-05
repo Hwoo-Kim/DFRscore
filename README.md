@@ -41,7 +41,7 @@ After preparing the target molecule data for retrosynthetic analysis, you can ru
 ```bash
 python retro_analysis.py \
 --template data/template/retro_template.pkl \
---reactant data/reactant_bag/filtered_ZINC.smi \
+--reactant data/reactant_bag/filtered_mcule.smi \
 --retro_target <PATH-TO-TARGET-FILE> \
 --depth 4 \
 --num_molecules <NUMBER-OF-MOLECULES-TO-BE-ANALYZED> \
