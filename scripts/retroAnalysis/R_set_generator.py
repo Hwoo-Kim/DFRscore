@@ -40,7 +40,7 @@ def R_set_generator(args, use_inchikey=False, canonicalize=False):
     log(f"  Started at: {since_inform}")
     # check the file already exists or not.
     reactant_bag_path = os.path.join(
-        args.root, "data/reactant_bag/R_set_mcule_221205.pkl"
+        args.root, "data/reactant_bag/R_set.pkl"
     )  # set
     if os.path.isfile(reactant_bag_path):
         log("  The file already exists.")
